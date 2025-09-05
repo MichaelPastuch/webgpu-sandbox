@@ -1,0 +1,24 @@
+{
+  "name": "webgpu-sandbox",
+  "version": "1.0.0",
+  "description": "Tinker and test WebGPU features",
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "check": "tsc",
+    "open": "open index.html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://MichaelPastuch@github.com/MichaelPastuch/webgpu-sandbox.git"
+  },
+  "author": "Michael Pastuch",
+  "license": "unlicense",
+  "bugs": {
+    "url": "https://github.com/MichaelPastuch/webgpu-sandbox/issues"
+  },
+  "homepage": "https://github.com/MichaelPastuch/webgpu-sandbox#readme",
+  "devDependencies": {
+    "esbuild": "0.25.9",
+    "typescript": "5.9.2"
+  }
+}
