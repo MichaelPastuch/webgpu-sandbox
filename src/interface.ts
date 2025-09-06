@@ -1,6 +1,6 @@
 type bytes = number;
 
-interface IRgba {
+export interface IRgba {
 	readonly r: number;
 	readonly g: number;
 	readonly b: number;
@@ -9,7 +9,6 @@ interface IRgba {
 
 // WebGPU canvas context
 
-// https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure
 interface IGpuCanvasConfig {
 	readonly device: IGpuDevice;
 	readonly format: TCanvasFormat;
@@ -20,15 +19,18 @@ interface IGpuCanvasConfig {
 	// readonly viewFormats
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/API/GPUTextureView
-interface IGpuTextureView { }
+/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUTextureView) */
+interface IGpuTextureView {
+	readonly label: string;
+}
 
-// https://developer.mozilla.org/en-US/docs/Web/API/GPUTexture
+/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUTexture) */
 interface IGpuTexture {
 	createView(): IGpuTextureView;
 }
 
 export interface IGpuCanvasContext {
+	/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure) */
 	configure(config: IGpuCanvasConfig): void;
 	getCurrentTexture(): IGpuTexture;
 }
@@ -66,9 +68,9 @@ interface IFragmentPipeline extends IPipelineBase {
 	}>;
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/API/GPURenderPipeline
-interface IGpuRenderPipeline {
-	readonly label?: string;
+/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPURenderPipeline) */
+export interface IGpuRenderPipeline {
+	readonly label: string;
 	// getBindGroupLayout()
 }
 
@@ -99,8 +101,9 @@ interface IPipelineDescriptorConfig {
 	readonly layout: "auto";
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/API/GPUShaderModule
-interface IGpuShaderModule { }
+
+/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUShaderModule) */
+export interface IGpuShaderModule { }
 
 interface IGpuShaderModuleOpts {
 	readonly label?: string;
@@ -109,14 +112,14 @@ interface IGpuShaderModuleOpts {
 	// readonly sourceMap
 }
 
-interface IGpuBuffer { }
+export interface IGpuBuffer { }
 
 interface IGpuBufferOpts {
 	readonly size: number;
 	readonly usage: unknown;
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/API/GPUQueue
+/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUQueue) */
 interface IGpuQueue {
 	writeBuffer<T>(
 		buffer: IGpuBuffer, bufferOffset: number,
@@ -126,7 +129,7 @@ interface IGpuQueue {
 	submit(commandBuffers: ReadonlyArray<IGpuCommandBuffer>): void;
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/API/GPURenderPassEncoder
+/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPURenderPassEncoder) */
 interface IGpuRenderPassEncoder {
 	readonly label?: string;
 	setPipeline(pipeline: IGpuRenderPipeline): void;
@@ -152,18 +155,18 @@ interface IRenderPassDescriptor {
 	}>;
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/API/GPUCommandBuffer
+/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUCommandBuffer) */
 interface IGpuCommandBuffer {
-	readonly label?: string;
+	readonly label: string;
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/API/GPUCommandEncoder
+/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUCommandEncoder) */
 interface IGpuCommandEncoder {
 	beginRenderPass(descriptor: IRenderPassDescriptor): IGpuRenderPassEncoder;
 	finish(descriptor?: { readonly label?: string }): IGpuCommandBuffer;
 }
 
-interface IGpuDevice {
+export interface IGpuDevice {
 	createShaderModule(opts: IGpuShaderModuleOpts): IGpuShaderModule;
 	createBuffer(opts: IGpuBufferOpts): IGpuBuffer;
 	createRenderPipeline(descriptor: IPipelineDescriptorConfig): IGpuRenderPipeline;
@@ -175,7 +178,7 @@ interface IGpuAdapter {
 	requestDevice(): Promise<IGpuDevice>;
 }
 
-type TCanvasFormat = "bgra8unorm" | "rgba8unorm" | "rgba16float";
+export type TCanvasFormat = "bgra8unorm" | "rgba8unorm" | "rgba16float";
 
 export interface IGpu {
 	requestAdapter(): Promise<IGpuAdapter>;

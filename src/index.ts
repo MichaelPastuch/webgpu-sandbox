@@ -1,10 +1,5 @@
-import { type IGpu, type IGpuCanvasContext } from "./interface";
-
-// Annotate global bitwise values
-declare var GPUBufferUsage: {
-	readonly VERTEX: number;
-	readonly COPY_DST: number;
-}
+import { type IGpu } from "./interface";
+import { Wrapper } from "./wrapper";
 
 document.addEventListener("DOMContentLoaded", () => {
 	const main = document.getElementById("main");
@@ -12,8 +7,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		throw Error("Unable to mount application to #main");
 	}
 
-	const WIDTH = 640;
-	const HEIGHT = 480;
+	const WIDTH = 800;
+	const HEIGHT = 600;
 	const canvas = document.createElement("canvas");
 	canvas.width = WIDTH;
 	canvas.height = HEIGHT;
@@ -33,113 +28,21 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
-	const context = canvas.getContext("webgpu") as unknown as IGpuCanvasContext;
-	if (context == null) {
-		throw Error("Unable to get webgpu canvas context");
-	}
+	const wrapper = await Wrapper.create(canvas, gpu);
 
-	const adapter = await gpu.requestAdapter();
-	if (adapter == null) {
-		throw Error("Request WebGPU adapter failed");
-	}
-	const device = await adapter.requestDevice();
+	// First render
+	wrapper.render();
 
-	// Prepare context for WebGPU rendering
-	context.configure({
-		device,
-		format: gpu.getPreferredCanvasFormat(),
-		alphaMode: "premultiplied"
+	// Redraw with different background on key press
+	document.addEventListener("keypress", (event) => {
+		const code = event.key.charCodeAt(0);
+		// Assemble an interesting RGB value from key code
+		wrapper.render({
+			r: (code % 83) * 1.0 / 83,
+			g: (code % 19) * 1.0 / 19,
+			b: (code % 43) * 1.0 / 43,
+			a: 1
+		});
 	});
 
-	// Prepare shaders
-	const shaderSrc = document.getElementById("shaders");
-	if (shaderSrc == null) {
-		throw Error("Unable to locate shaders #shaders");
-	}
-	const module = device.createShaderModule({
-		code: shaderSrc.textContent
-	});
-
-	// Assemble triangle
-	const vertices = new Float32Array([
-		// Top
-		// xyzw
-		0.0, 0.6, 0, 1,
-		// rgba
-		0, 1, 1, 1,
-		// Bottom-left
-		-0.6, -0.6, 0, 1,
-		1, 0, 1, 1,
-		// Bottom-right
-		0.6, -0.6, 0, 1,
-		1, 1, 0, 1
-	]);
-
-	const vertexBuffer = device.createBuffer({
-		size: vertices.byteLength,
-		usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-	});
-
-	device.queue.writeBuffer(
-		vertexBuffer, 0,
-		vertices, 0, vertices.length
-	);
-
-	// Input assembly - describe vertex assembly and wgsl entry points
-	const renderPipelline = device.createRenderPipeline({
-		vertex: {
-			module,
-			entryPoint: "vertexShader",
-			buffers: [{
-				attributes: [{
-					shaderLocation: 0,
-					offset: 0,
-					format: "float32x4"
-				}, {
-					shaderLocation: 1,
-					offset: 16,
-					format: "float32x4"
-				}],
-				arrayStride: 32
-			}]
-		},
-		fragment: {
-			module,
-			entryPoint: "fragmentShader",
-			targets: [{
-				format: gpu.getPreferredCanvasFormat()
-			}]
-		},
-		// Default primitive assemble, here for illustration purposes
-		primitive: {
-			topology: "triangle-list"
-		},
-		layout: "auto"
-	});
-
-	// Assemble GPU work batch
-	const commandEncoder = device.createCommandEncoder();
-
-	// Prepare render pass - clear canvas and draw triangle to it
-	const passEncoder = commandEncoder.beginRenderPass({
-		colorAttachments: [{
-			clearValue: { r: 0, g: 0, b: 0.2, a: 1 },
-			loadOp: "clear",
-			storeOp: "store",
-			view: context.getCurrentTexture().createView()
-		}]
-	});
-
-	// Attach pipeline and bind buffer
-	passEncoder.setPipeline(renderPipelline);
-	passEncoder.setVertexBuffer(0, vertexBuffer);
-
-	// Draw 3 vertex triangle
-	passEncoder.draw(3);
-
-	// Complete render pass
-	passEncoder.end();
-
-	// Submit commands to GPU
-	device.queue.submit([commandEncoder.finish()]);
 }
