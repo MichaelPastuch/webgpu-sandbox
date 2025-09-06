@@ -1,4 +1,4 @@
-import { type IGpu, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IRgba, type TCanvasFormat } from "./interface";
+import { type IGpu, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type TRgba, type TCanvasFormat } from "./interface";
 
 // Annotate global bitwise values
 declare var GPUBufferUsage: {
@@ -107,7 +107,7 @@ export class Wrapper {
 	}
 
 	// TODO Scenegraph system
-	public render(clearValue: IRgba = { r: 0, g: 0, b: 0.2, a: 1 }) {
+	public render(clearValue: TRgba = { r: 0, g: 0, b: 0.2, a: 1 }) {
 		// console.debug(clearValue);
 
 		// Assemble GPU work batch

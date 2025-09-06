@@ -1,11 +1,11 @@
 type bytes = number;
 
-export interface IRgba {
+export type TRgba = {
 	readonly r: number;
 	readonly g: number;
 	readonly b: number;
 	readonly a: number;
-}
+} | [number, number, number, number];
 
 // WebGPU canvas context
 
@@ -146,7 +146,7 @@ interface IGpuRenderPassEncoder {
 interface IRenderPassDescriptor {
 	readonly label?: string;
 	readonly colorAttachments: ReadonlyArray<{
-		readonly clearValue?: ReadonlyArray<number> | IRgba;
+		readonly clearValue?: TRgba;
 		readonly depthSlice?: number;
 		readonly loadOp: "clear" | "load";
 		readonly storeOp: "discard" | "store";
