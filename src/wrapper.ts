@@ -8,6 +8,8 @@ declare var GPUBufferUsage: {
 
 export class Wrapper {
 
+	private static readonly DEFAULT_CLEAR: TRgba = { r: 0.5, g: 0.6, b: 0.8, a: 1 }
+
 	public static async create(canvas: HTMLCanvasElement, gpu: IGpu) {
 		const context = canvas.getContext("webgpu") as unknown as IGpuCanvasContext;
 		if (context == null) {
@@ -23,7 +25,8 @@ export class Wrapper {
 
 	private readonly module: IGpuShaderModule;
 	private readonly vertexBuffer: IGpuBuffer;
-	private readonly renderPipeline: IGpuRenderPipeline;
+	private renderPipeline!: IGpuRenderPipeline;
+	private ambient!: TRgba;
 
 	private constructor(
 		private readonly context: IGpuCanvasContext,
@@ -72,10 +75,27 @@ export class Wrapper {
 			vertices, 0, vertices.length
 		);
 
+		this.setAmbientColour(Wrapper.DEFAULT_CLEAR);
+	}
+
+	// TODO Move ambient colour to bind group
+	public setAmbientColour(ambient: TRgba) {
+		this.ambient = ambient;
+		const [red, green, blue] = Array.isArray(ambient)
+			? ambient
+			: [ambient.r, ambient.g, ambient.b]
+		const constants = {
+			red, green, blue
+		}
+
 		// TODO Functions to create/update pipeline with entryPoints and constants
 		// Input assembly - describe vertex assembly and wgsl entry points
-		this.renderPipeline = device.createRenderPipeline({
+		this.renderPipeline = this.device.createRenderPipeline({
+			layout: "auto",
+			// Default primitive assemble, here for illustration purposes
+			primitive: { topology: "triangle-list" },
 			vertex: {
+				constants,
 				module: this.module,
 				entryPoint: "vertexShader",
 				buffers: [{
@@ -92,23 +112,18 @@ export class Wrapper {
 				}]
 			},
 			fragment: {
+				constants,
 				module: this.module,
 				entryPoint: "fragmentShader",
 				targets: [{
 					format: this.format
 				}]
-			},
-			// Default primitive assemble, here for illustration purposes
-			primitive: {
-				topology: "triangle-list"
-			},
-			layout: "auto"
+			}
 		});
 	}
 
 	// TODO Scenegraph system
-	public render(clearValue: TRgba = { r: 0, g: 0, b: 0.2, a: 1 }) {
-		// console.debug(clearValue);
+	public render() {
 
 		// Assemble GPU work batch
 		const commandEncoder = this.device.createCommandEncoder();
@@ -116,7 +131,7 @@ export class Wrapper {
 		// Prepare render pass - clear canvas and draw triangle to it
 		const passEncoder = commandEncoder.beginRenderPass({
 			colorAttachments: [{
-				clearValue,
+				clearValue: this.ambient,
 				loadOp: "clear",
 				storeOp: "store",
 				view: this.context.getCurrentTexture().createView()

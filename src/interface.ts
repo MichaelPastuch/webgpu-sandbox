@@ -131,7 +131,7 @@ interface IGpuQueue {
 
 /** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPURenderPassEncoder) */
 interface IGpuRenderPassEncoder {
-	readonly label?: string;
+	readonly label: string;
 	setPipeline(pipeline: IGpuRenderPipeline): void;
 	setVertexBuffer(slot: number, buffer: IGpuBuffer | null): void;
 	setVertexBuffer(slot: number, buffer: IGpuBuffer, offset: number): void;

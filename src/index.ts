@@ -36,13 +36,16 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	// Redraw with different background on key press
 	document.addEventListener("keypress", (event) => {
 		const code = event.key.charCodeAt(0);
+
 		// Assemble an interesting RGB value from key code
-		wrapper.render({
+		wrapper.setAmbientColour({
 			r: (code % 83) * 1.0 / 83,
 			g: (code % 19) * 1.0 / 19,
 			b: (code % 43) * 1.0 / 43,
 			a: 1
 		});
+
+		wrapper.render();
 	});
 
 }
