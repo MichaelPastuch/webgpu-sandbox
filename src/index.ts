@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
 	if (main == null) {
 		throw Error("Unable to mount application to #main");
 	}
-	// main.innerText = "Hello, world!";
 
 	const WIDTH = 640;
 	const HEIGHT = 480;
@@ -31,7 +30,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		context.font = "24px serif";
 		context.fillText("WebGPU is not supported", WIDTH >> 2, HEIGHT >> 1);
 	}
-
 });
 
 async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
@@ -62,22 +60,19 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		code: shaderSrc.textContent
 	});
 
-	// Add triangle to GPU
-
+	// Assemble triangle
 	const vertices = new Float32Array([
 		// Top
 		// xyzw
 		0.0, 0.6, 0, 1,
 		// rgba
-		1, 0, 0, 1,
-
+		0, 1, 1, 1,
 		// Bottom-left
-		-0.5, -0.6, 0, 1,
-		0, 1, 0, 1,
-
+		-0.6, -0.6, 0, 1,
+		1, 0, 1, 1,
 		// Bottom-right
-		0.5, -0.6, 0, 1,
-		0, 0, 1, 1,
+		0.6, -0.6, 0, 1,
+		1, 1, 0, 1
 	]);
 
 	const vertexBuffer = device.createBuffer({
@@ -91,7 +86,6 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	);
 
 	// Input assembly - describe vertex assembly and wgsl entry points
-
 	const renderPipelline = device.createRenderPipeline({
 		vertex: {
 			module,
@@ -123,10 +117,29 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		layout: "auto"
 	});
 
-	console.debug(renderPipelline);
-
+	// Assemble GPU work batch
 	const commandEncoder = device.createCommandEncoder();
 
-	// https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API#running_a_rendering_pass
-	console.debug(commandEncoder);
+	// Prepare render pass - clear canvas and draw triangle to it
+	const passEncoder = commandEncoder.beginRenderPass({
+		colorAttachments: [{
+			clearValue: { r: 0, g: 0, b: 0.2, a: 1 },
+			loadOp: "clear",
+			storeOp: "store",
+			view: context.getCurrentTexture().createView()
+		}]
+	});
+
+	// Attach pipeline and bind buffer
+	passEncoder.setPipeline(renderPipelline);
+	passEncoder.setVertexBuffer(0, vertexBuffer);
+
+	// Draw 3 vertex triangle
+	passEncoder.draw(3);
+
+	// Complete render pass
+	passEncoder.end();
+
+	// Submit commands to GPU
+	device.queue.submit([commandEncoder.finish()]);
 }
