@@ -37,6 +37,69 @@ export interface IGpuCanvasContext {
 
 // WebGPU device
 
+interface IGpuBindGroupLayoutDescriptorEntry {
+	readonly binding: number;
+	readonly visibility: unknown;
+}
+
+interface IBindGroupBuffer extends IGpuBindGroupLayoutDescriptorEntry {
+	readonly buffer: {
+		// Match with GPUBufferUsage value set on buffer
+		readonly type?: "read-only-storage" | "storage" | "uniform";
+		readonly hasDynamicOffset?: boolean;
+		readonly minBindingSize?: number;
+	};
+}
+
+interface IBindGroupTexture extends IGpuBindGroupLayoutDescriptorEntry {
+	readonly texture: {
+		readonly multisampled?: boolean;
+		readonly sampleType?: "depth" | "float" | "sint" | "uint" | "unfilterable-float";
+		// readonly viewDimension?
+	};
+}
+
+// Additional bind group layouts extend IGpuBindGroupLayoutDescriptorEntry
+
+// https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createBindGroupLayout#resource_layout_objects
+type TGpuBindGroupLayoutDescriptorEntries = IBindGroupBuffer | IBindGroupTexture
+
+interface IGpuBindGroupLayoutDescriptor {
+	readonly label?: string;
+	readonly entries: ReadonlyArray<TGpuBindGroupLayoutDescriptorEntries>;
+}
+
+interface IGpuBindGroupLayout {
+	readonly label: string;
+}
+
+interface IGpuBufferBinding {
+	readonly buffer: IGpuBuffer;
+}
+
+interface IGpuBindGroupDescriptor {
+	readonly label?: string;
+	readonly layout: IGpuBindGroupLayout;
+	readonly entries: ReadonlyArray<{
+		readonly binding: number;
+		// TODO module variants: GPUExternalTexture, GPUSampler, GPUTextureView
+		readonly resource: IGpuBufferBinding;
+	}>
+}
+
+export interface IGpuBindGroup {
+	readonly label: string;
+}
+
+interface IGpuPipelineLayoutDescriptor {
+	readonly label?: string;
+	readonly bindGroupLayouts: ReadonlyArray<IGpuBindGroupLayout>;
+}
+
+interface IGpuPipelineLayout {
+	readonly label: string;
+}
+
 interface IPipelineBase {
 	readonly entryPoint?: string;
 	readonly constants?: Record<string, number | boolean>;
@@ -98,9 +161,8 @@ interface IPipelineDescriptorConfig {
 	readonly fragment?: IFragmentPipeline;
 	// https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createRenderPipeline#multisample_object_structure
 	// readonly multisample?: {};
-	readonly layout: "auto";
+	readonly layout: "auto" | IGpuPipelineLayout;
 }
-
 
 /** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUShaderModule) */
 export interface IGpuShaderModule { }
@@ -133,6 +195,8 @@ interface IGpuQueue {
 interface IGpuRenderPassEncoder {
 	readonly label: string;
 	setPipeline(pipeline: IGpuRenderPipeline): void;
+	setBindGroup(index: number, bindGroup: IGpuBindGroup): void;
+	// TODO setBindGroup with dynamicOffsets variants
 	setVertexBuffer(slot: number, buffer: IGpuBuffer | null): void;
 	setVertexBuffer(slot: number, buffer: IGpuBuffer, offset: number): void;
 	setVertexBuffer(slot: number, buffer: IGpuBuffer, offset: number, size: number): void;
@@ -169,6 +233,9 @@ interface IGpuCommandEncoder {
 export interface IGpuDevice {
 	createShaderModule(opts: IGpuShaderModuleOpts): IGpuShaderModule;
 	createBuffer(opts: IGpuBufferOpts): IGpuBuffer;
+	createBindGroupLayout(descriptor: IGpuBindGroupLayoutDescriptor): IGpuBindGroupLayout;
+	createBindGroup(descriptor: IGpuBindGroupDescriptor): IGpuBindGroup;
+	createPipelineLayout(descriptor: IGpuPipelineLayoutDescriptor): IGpuPipelineLayout;
 	createRenderPipeline(descriptor: IPipelineDescriptorConfig): IGpuRenderPipeline;
 	createCommandEncoder(descriptor?: { readonly label?: string }): IGpuCommandEncoder;
 	readonly queue: IGpuQueue;

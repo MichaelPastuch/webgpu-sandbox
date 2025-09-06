@@ -1,14 +1,18 @@
-import { type IGpu, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type TRgba, type TCanvasFormat } from "./interface";
+import { type IGpu, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type TRgba, type TCanvasFormat, type IGpuBindGroup } from "./interface";
 
 // Annotate global bitwise values
 declare var GPUBufferUsage: {
 	readonly VERTEX: number;
 	readonly COPY_DST: number;
+	readonly UNIFORM: number;
+}
+
+declare var GPUShaderStage: {
+	readonly VERTEX: number;
+	readonly FRAGMENT: number;
 }
 
 export class Wrapper {
-
-	private static readonly DEFAULT_CLEAR: TRgba = { r: 0.5, g: 0.6, b: 0.8, a: 1 }
 
 	public static async create(canvas: HTMLCanvasElement, gpu: IGpu) {
 		const context = canvas.getContext("webgpu") as unknown as IGpuCanvasContext;
@@ -24,9 +28,13 @@ export class Wrapper {
 	}
 
 	private readonly module: IGpuShaderModule;
+
 	private readonly vertexBuffer: IGpuBuffer;
-	private renderPipeline!: IGpuRenderPipeline;
-	private ambient!: TRgba;
+	private readonly ambientBuffer: IGpuBuffer;
+	private clearValue: TRgba = [0, 0, 0, 0];
+
+	private bindGroup: IGpuBindGroup;
+	private renderPipeline: IGpuRenderPipeline;
 
 	private constructor(
 		private readonly context: IGpuCanvasContext,
@@ -47,7 +55,7 @@ export class Wrapper {
 		if (shaderSrc == null) {
 			throw Error("Unable to locate shaders #shaders");
 		}
-		this.module = device.createShaderModule({
+		this.module = this.device.createShaderModule({
 			code: shaderSrc.textContent
 		});
 
@@ -56,7 +64,7 @@ export class Wrapper {
 		const vertices = new Float32Array([
 			// Top
 			// xyzw
-			0.0, 0.6, 0, 1,
+			0, 0.6, 0, 1,
 			// rgba
 			0, 1, 1, 1,
 			// Bottom-left
@@ -66,7 +74,7 @@ export class Wrapper {
 			0.6, -0.6, 0, 1,
 			1, 1, 0, 1
 		]);
-		this.vertexBuffer = device.createBuffer({
+		this.vertexBuffer = this.device.createBuffer({
 			size: vertices.byteLength,
 			usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
 		});
@@ -75,27 +83,45 @@ export class Wrapper {
 			vertices, 0, vertices.length
 		);
 
-		this.setAmbientColour(Wrapper.DEFAULT_CLEAR);
-	}
+		// Assemble ambient colour buffer
+		this.ambientBuffer = this.device.createBuffer({
+			// float32 rgb
+			size: 4 * 3,
+			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
+		});
+		this.setAmbientColour(0.5, 0.6, 0.8);
 
-	// TODO Move ambient colour to bind group
-	public setAmbientColour(ambient: TRgba) {
-		this.ambient = ambient;
-		const [red, green, blue] = Array.isArray(ambient)
-			? ambient
-			: [ambient.r, ambient.g, ambient.b]
-		const constants = {
-			red, green, blue
-		}
+		// Bind data for vertex/fragment shader usage
+
+		const bindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: GPUShaderStage.VERTEX,
+				buffer: { type: "uniform" }
+			}]
+		});
+		this.bindGroup = this.device.createBindGroup({
+			layout: bindGroupLayout,
+			entries: [{
+				binding: 0,
+				resource: { buffer: this.ambientBuffer }
+			}]
+		});
+
+		// Create pipeline layout
+		const pipelineLayout = this.device.createPipelineLayout({
+			bindGroupLayouts: [
+				bindGroupLayout
+			]
+		});
 
 		// TODO Functions to create/update pipeline with entryPoints and constants
 		// Input assembly - describe vertex assembly and wgsl entry points
 		this.renderPipeline = this.device.createRenderPipeline({
-			layout: "auto",
+			layout: pipelineLayout,
 			// Default primitive assemble, here for illustration purposes
 			primitive: { topology: "triangle-list" },
 			vertex: {
-				constants,
 				module: this.module,
 				entryPoint: "vertexShader",
 				buffers: [{
@@ -112,7 +138,6 @@ export class Wrapper {
 				}]
 			},
 			fragment: {
-				constants,
 				module: this.module,
 				entryPoint: "fragmentShader",
 				targets: [{
@@ -120,6 +145,15 @@ export class Wrapper {
 				}]
 			}
 		});
+	}
+
+	public setAmbientColour(red: number, green: number, blue: number) {
+		this.clearValue = [red, green, blue, 1];
+		const ambientCols = new Float32Array([red, green, blue]);
+		this.device.queue.writeBuffer(
+			this.ambientBuffer, 0,
+			ambientCols, 0, ambientCols.length
+		);
 	}
 
 	// TODO Scenegraph system
@@ -131,18 +165,19 @@ export class Wrapper {
 		// Prepare render pass - clear canvas and draw triangle to it
 		const passEncoder = commandEncoder.beginRenderPass({
 			colorAttachments: [{
-				clearValue: this.ambient,
+				clearValue: this.clearValue,
 				loadOp: "clear",
 				storeOp: "store",
 				view: this.context.getCurrentTexture().createView()
 			}]
 		});
 
-		// Attach pipeline and bind buffer
+		// Render pipeline and bind groups
 		passEncoder.setPipeline(this.renderPipeline);
-		passEncoder.setVertexBuffer(0, this.vertexBuffer);
+		passEncoder.setBindGroup(0, this.bindGroup);
 
 		// Draw 3 vertex triangle
+		passEncoder.setVertexBuffer(0, this.vertexBuffer);
 		passEncoder.draw(3);
 
 		// Complete render pass
