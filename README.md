@@ -1,2 +1,3 @@
 # webgpu-sandbox
-Tinker and test webgpu as well as ways to bundle code and shaders
+
+Tinker and test WebGPU, strict TypeScript, and code bundling approaches.

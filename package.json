@@ -4,7 +4,8 @@
   "description": "Tinker and test WebGPU features",
   "scripts": {
     "build": "node esbuild.mjs",
-    "check": "tsc",
+    "watch": "node esbuild.mjs --watch",
+    "monitor": "tsc -w",
     "open": "open index.html"
   },
   "repository": {
