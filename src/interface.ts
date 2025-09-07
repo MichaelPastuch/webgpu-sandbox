@@ -192,7 +192,7 @@ interface IGpuQueue {
 }
 
 /** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPURenderPassEncoder) */
-interface IGpuRenderPassEncoder {
+export interface IGpuRenderPassEncoder {
 	readonly label: string;
 	setPipeline(pipeline: IGpuRenderPipeline): void;
 	setBindGroup(index: number, bindGroup: IGpuBindGroup): void;

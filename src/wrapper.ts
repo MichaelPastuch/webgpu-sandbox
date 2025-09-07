@@ -1,16 +1,6 @@
-import { type IGpu, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type TRgba, type TCanvasFormat, type IGpuBindGroup } from "./interface";
-
-// Annotate global bitwise values
-declare var GPUBufferUsage: {
-	readonly VERTEX: number;
-	readonly COPY_DST: number;
-	readonly UNIFORM: number;
-}
-
-declare var GPUShaderStage: {
-	readonly VERTEX: number;
-	readonly FRAGMENT: number;
-}
+import { SHADER_BUFFER, VERTEX_STAGE } from "./constants";
+import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type TCanvasFormat, type TRgba } from "./interface";
+import { Triangle } from "./models/trangle";
 
 export class Wrapper {
 
@@ -29,7 +19,10 @@ export class Wrapper {
 
 	private readonly module: IGpuShaderModule;
 
-	private readonly vertexBuffer: IGpuBuffer;
+	private readonly triangle: Triangle;
+	private readonly triangleFriend: Triangle;
+	private readonly triangleFoe: Triangle;
+
 	private readonly ambientBuffer: IGpuBuffer;
 	private clearValue: TRgba = [0, 0, 0, 0];
 
@@ -61,33 +54,23 @@ export class Wrapper {
 
 		// TODO Function to create vertex buffer, preset helpers for rectangle, cuboid, sphere, etc.
 		// Assemble triangle
-		const vertices = new Float32Array([
-			// Top
-			// xyzw
-			0, 0.6, 0, 1,
-			// rgba
-			0, 1, 1, 1,
-			// Bottom-left
-			-0.6, -0.6, 0, 1,
-			1, 0, 1, 1,
-			// Bottom-right
-			0.6, -0.6, 0, 1,
-			1, 1, 0, 1
-		]);
-		this.vertexBuffer = this.device.createBuffer({
-			size: vertices.byteLength,
-			usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+		this.triangle = new Triangle(this.device, {
+			width: 1.5,
+			shiftTop: -1,
+			colors: "cmy"
 		});
-		this.device.queue.writeBuffer(
-			this.vertexBuffer, 0,
-			vertices, 0, vertices.length
-		);
+		this.triangleFriend = new Triangle(this.device);
+		this.triangleFoe = new Triangle(this.device, {
+			width: 0.5,
+			shiftTop: 0.5,
+			colors: "100"
+		});
 
 		// Assemble ambient colour buffer
 		this.ambientBuffer = this.device.createBuffer({
 			// float32 rgb
 			size: 4 * 3,
-			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
+			usage: SHADER_BUFFER
 		});
 		this.setAmbientColour(0.5, 0.6, 0.8);
 
@@ -96,7 +79,7 @@ export class Wrapper {
 		const bindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
 				binding: 0,
-				visibility: GPUShaderStage.VERTEX,
+				visibility: VERTEX_STAGE,
 				buffer: { type: "uniform" }
 			}]
 		});
@@ -176,9 +159,10 @@ export class Wrapper {
 		passEncoder.setPipeline(this.renderPipeline);
 		passEncoder.setBindGroup(0, this.bindGroup);
 
-		// Draw 3 vertex triangle
-		passEncoder.setVertexBuffer(0, this.vertexBuffer);
-		passEncoder.draw(3);
+		// Draw shapes
+		this.triangle.draw(passEncoder);
+		this.triangleFriend.draw(passEncoder);
+		this.triangleFoe.draw(passEncoder);
 
 		// Complete render pass
 		passEncoder.end();
