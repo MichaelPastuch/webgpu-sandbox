@@ -191,12 +191,17 @@ interface IGpuQueue {
 	submit(commandBuffers: ReadonlyArray<IGpuCommandBuffer>): void;
 }
 
+type TIndexFormat = "uint16" | "uint32";
+
 /** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPURenderPassEncoder) */
 export interface IGpuRenderPassEncoder {
 	readonly label: string;
 	setPipeline(pipeline: IGpuRenderPipeline): void;
 	setBindGroup(index: number, bindGroup: IGpuBindGroup): void;
 	// TODO setBindGroup with dynamicOffsets variants
+	setIndexBuffer(buffer: IGpuBuffer, indexFormat: TIndexFormat): void;
+	setIndexBuffer(buffer: IGpuBuffer, indexFormat: TIndexFormat, offset: number): void;
+	setIndexBuffer(buffer: IGpuBuffer, indexFormat: TIndexFormat, offset: number, size: number): void;
 	setVertexBuffer(slot: number, buffer: IGpuBuffer | null): void;
 	setVertexBuffer(slot: number, buffer: IGpuBuffer, offset: number): void;
 	setVertexBuffer(slot: number, buffer: IGpuBuffer, offset: number, size: number): void;
@@ -204,6 +209,11 @@ export interface IGpuRenderPassEncoder {
 	draw(vertexCount: number, instanceCount: number): void;
 	draw(vertexCount: number, instanceCount: number, firstVertex: number): void;
 	draw(vertexCount: number, instanceCount: number, firstVertex: number, firstInstance: number): void;
+	drawIndexed(indexCount: number): void;
+	drawIndexed(indexCount: number, instanceCount: number): void;
+	drawIndexed(indexCount: number, instanceCount: number, firstIndex: number): void;
+	drawIndexed(indexCount: number, instanceCount: number, firstIndex: number, baseVertex: number): void;
+	drawIndexed(indexCount: number, instanceCount: number, firstIndex: number, baseVertex: number, firstInstance: number): void;
 	end(): void;
 }
 

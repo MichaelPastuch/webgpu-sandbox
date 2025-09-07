@@ -1,5 +1,6 @@
 import { SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type TCanvasFormat, type TRgba } from "./interface";
+import { Rectangle } from "./models/rectangle";
 import { Triangle } from "./models/trangle";
 
 export class Wrapper {
@@ -19,6 +20,7 @@ export class Wrapper {
 
 	private readonly module: IGpuShaderModule;
 
+	private readonly rectangle: Rectangle;
 	private readonly triangle: Triangle;
 	private readonly triangleFriend: Triangle;
 	private readonly triangleFoe: Triangle;
@@ -53,7 +55,13 @@ export class Wrapper {
 		});
 
 		// TODO Function to create vertex buffer, preset helpers for rectangle, cuboid, sphere, etc.
-		// Assemble triangle
+
+		// Create rectangle
+		this.rectangle = new Rectangle(this.device, {
+			width: 1.8
+		});
+
+		// Create triangles
 		this.triangle = new Triangle(this.device, {
 			width: 1.5,
 			shiftTop: -0.75,
@@ -160,6 +168,7 @@ export class Wrapper {
 		passEncoder.setBindGroup(0, this.bindGroup);
 
 		// Draw shapes
+		this.rectangle.draw(passEncoder);
 		this.triangle.draw(passEncoder);
 		this.triangleFriend.draw(passEncoder);
 		this.triangleFoe.draw(passEncoder);
