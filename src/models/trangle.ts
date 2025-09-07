@@ -1,6 +1,7 @@
 import { Color } from "../color";
 import { VERTEX_BUFFER } from "../constants";
 import type { IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder } from "../interface";
+import type { IModel } from "./interface";
 
 interface ITriangleConfig {
 	readonly width?: number;
@@ -11,7 +12,7 @@ interface ITriangleConfig {
 	readonly colors?: string;
 }
 
-export class Triangle {
+export class Triangle implements IModel {
 
 	private readonly vertexBuffer: IGpuBuffer;
 

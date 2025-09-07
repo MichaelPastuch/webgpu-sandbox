@@ -1,6 +1,7 @@
 import { Color } from "../color";
 import { INDEX_BUFFER, VERTEX_BUFFER } from "../constants";
 import type { IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder } from "../interface";
+import type { IModel } from "./interface";
 
 interface IRectangleConfig {
 	readonly width?: number;
@@ -9,7 +10,7 @@ interface IRectangleConfig {
 	readonly colors?: string;
 }
 
-export class Rectangle {
+export class Rectangle implements IModel {
 
 	private readonly vertexBuffer: IGpuBuffer;
 	private readonly indexBuffer: IGpuBuffer;
@@ -63,8 +64,8 @@ export class Rectangle {
 		);
 	}
 
-	public draw(passEncoder: IGpuRenderPassEncoder, slot = 0) {
-		passEncoder.setVertexBuffer(slot, this.vertexBuffer);
+	public draw(passEncoder: IGpuRenderPassEncoder) {
+		passEncoder.setVertexBuffer(0, this.vertexBuffer);
 		passEncoder.setIndexBuffer(this.indexBuffer, "uint16");
 		passEncoder.drawIndexed(6);
 	}

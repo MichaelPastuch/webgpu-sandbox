@@ -1,5 +1,6 @@
 import { SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type TCanvasFormat, type TRgba } from "./interface";
+import type { IModel } from "./models/interface";
 import { Rectangle } from "./models/rectangle";
 import { Triangle } from "./models/trangle";
 
@@ -20,10 +21,7 @@ export class Wrapper {
 
 	private readonly module: IGpuShaderModule;
 
-	private readonly rectangle: Rectangle;
-	private readonly triangle: Triangle;
-	private readonly triangleFriend: Triangle;
-	private readonly triangleFoe: Triangle;
+	private readonly models: IModel[];
 
 	private readonly ambientBuffer: IGpuBuffer;
 	private clearValue: TRgba = [0, 0, 0, 0];
@@ -54,25 +52,25 @@ export class Wrapper {
 			code: shaderSrc.textContent
 		});
 
-		// TODO Function to create vertex buffer, preset helpers for rectangle, cuboid, sphere, etc.
-
-		// Create rectangle
-		this.rectangle = new Rectangle(this.device, {
-			width: 1.8
-		});
-
-		// Create triangles
-		this.triangle = new Triangle(this.device, {
-			width: 1.5,
-			shiftTop: -0.75,
-			colors: "cmy"
-		});
-		this.triangleFriend = new Triangle(this.device);
-		this.triangleFoe = new Triangle(this.device, {
-			width: 0.5,
-			shiftTop: 1.25,
-			colors: "100"
-		});
+		// TODO Function to create models for cuboid, sphere, etc.
+		this.models = [
+			// Create rectangle
+			new Rectangle(this.device, {
+				width: 1.75
+			}),
+			// Create triangles
+			new Triangle(this.device, {
+				width: 1.5,
+				shiftTop: -0.75,
+				colors: "cmy"
+			}),
+			new Triangle(this.device),
+			new Triangle(this.device, {
+				width: 0.5,
+				shiftTop: 1.25,
+				colors: "100"
+			})
+		];
 
 		// Assemble ambient colour buffer
 		this.ambientBuffer = this.device.createBuffer({
@@ -83,7 +81,6 @@ export class Wrapper {
 		this.setAmbientColour(0.8, 0.8, 0.8);
 
 		// Bind data for vertex/fragment shader usage
-
 		const bindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
 				binding: 0,
@@ -117,10 +114,12 @@ export class Wrapper {
 				entryPoint: "vertexShader",
 				buffers: [{
 					attributes: [{
+						// Position
 						shaderLocation: 0,
 						offset: 0,
 						format: "float32x4"
 					}, {
+						// Colour
 						shaderLocation: 1,
 						offset: 16,
 						format: "float32x4"
@@ -167,11 +166,8 @@ export class Wrapper {
 		passEncoder.setPipeline(this.renderPipeline);
 		passEncoder.setBindGroup(0, this.bindGroup);
 
-		// Draw shapes
-		this.rectangle.draw(passEncoder);
-		this.triangle.draw(passEncoder);
-		this.triangleFriend.draw(passEncoder);
-		this.triangleFoe.draw(passEncoder);
+		// Draw models
+		this.models.forEach((model) => model.draw(passEncoder));
 
 		// Complete render pass
 		passEncoder.end();
