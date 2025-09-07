@@ -56,13 +56,13 @@ export class Wrapper {
 		// Assemble triangle
 		this.triangle = new Triangle(this.device, {
 			width: 1.5,
-			shiftTop: -1,
+			shiftTop: -0.75,
 			colors: "cmy"
 		});
 		this.triangleFriend = new Triangle(this.device);
 		this.triangleFoe = new Triangle(this.device, {
 			width: 0.5,
-			shiftTop: 0.5,
+			shiftTop: 1.25,
 			colors: "100"
 		});
 
@@ -72,7 +72,7 @@ export class Wrapper {
 			size: 4 * 3,
 			usage: SHADER_BUFFER
 		});
-		this.setAmbientColour(0.5, 0.6, 0.8);
+		this.setAmbientColour(0.8, 0.8, 0.8);
 
 		// Bind data for vertex/fragment shader usage
 
