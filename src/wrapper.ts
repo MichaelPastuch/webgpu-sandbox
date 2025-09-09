@@ -58,7 +58,7 @@ export class Wrapper {
 		// TODO Get aspect ratio from canvas, update when canvas is resized
 		this.camera = new Camera(this.device);
 		// this.camera.updateProjection(1, 100, 4.0 / 3.0, 90);
-		this.camera.updateView([0, 0, -1], [-0.1, 0.1, 0]);
+		// this.camera.updateView([0, 0, -1], [-0.1, 0.1, 0]);
 		this.camera.writeBuffer();
 
 		// Assemble ambient colour buffer
