@@ -23,7 +23,6 @@ export class Triangle implements IModel {
 		shiftTop = 0,
 		colors = "rgb"
 	}: ITriangleConfig = {}) {
-
 		const x = 0.5 * width;
 		const y = 0.5 * height;
 		// Assemble triangle (xyzw, rgba)

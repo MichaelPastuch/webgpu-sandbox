@@ -1,3 +1,4 @@
+import { Camera } from "./camera";
 import { SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type TCanvasFormat, type TRgba } from "./interface";
 import type { IModel } from "./models/interface";
@@ -21,13 +22,15 @@ export class Wrapper {
 
 	private readonly module: IGpuShaderModule;
 
-	private readonly models: IModel[];
+	private readonly camera: Camera;
 
 	private readonly ambientBuffer: IGpuBuffer;
 	private clearValue: TRgba = [0, 0, 0, 0];
 
 	private bindGroup: IGpuBindGroup;
 	private renderPipeline: IGpuRenderPipeline;
+
+	private readonly models: IModel[];
 
 	private constructor(
 		private readonly context: IGpuCanvasContext,
@@ -52,25 +55,11 @@ export class Wrapper {
 			code: shaderSrc.textContent
 		});
 
-		// TODO Function to create models for cuboid, sphere, etc.
-		this.models = [
-			// Create rectangle
-			new Rectangle(this.device, {
-				width: 1.75
-			}),
-			// Create triangles
-			new Triangle(this.device, {
-				width: 1.5,
-				shiftTop: -0.75,
-				colors: "cmy"
-			}),
-			new Triangle(this.device),
-			new Triangle(this.device, {
-				width: 0.5,
-				shiftTop: 1.25,
-				colors: "100"
-			})
-		];
+		// TODO Get aspect ratio from canvas, update when canvas is resized
+		this.camera = new Camera(this.device);
+		// this.camera.updateProjection(1, 100, 4.0 / 3.0, 90);
+		this.camera.updateView([0, 0, -1], [-0.1, 0.1, 0]);
+		this.camera.writeBuffer();
 
 		// Assemble ambient colour buffer
 		this.ambientBuffer = this.device.createBuffer({
@@ -86,21 +75,26 @@ export class Wrapper {
 				binding: 0,
 				visibility: VERTEX_STAGE,
 				buffer: { type: "uniform" }
+			}, {
+				binding: 1,
+				visibility: VERTEX_STAGE,
+				buffer: { type: "uniform" }
 			}]
 		});
 		this.bindGroup = this.device.createBindGroup({
 			layout: bindGroupLayout,
 			entries: [{
 				binding: 0,
+				resource: { buffer: this.camera.buffer }
+			}, {
+				binding: 1,
 				resource: { buffer: this.ambientBuffer }
 			}]
 		});
 
 		// Create pipeline layout
 		const pipelineLayout = this.device.createPipelineLayout({
-			bindGroupLayouts: [
-				bindGroupLayout
-			]
+			bindGroupLayouts: [bindGroupLayout]
 		});
 
 		// TODO Functions to create/update pipeline with entryPoints and constants
@@ -108,7 +102,10 @@ export class Wrapper {
 		this.renderPipeline = this.device.createRenderPipeline({
 			layout: pipelineLayout,
 			// Default primitive assemble, here for illustration purposes
-			primitive: { topology: "triangle-list" },
+			primitive: {
+				cullMode: "back",
+				topology: "triangle-list"
+			},
 			vertex: {
 				module: this.module,
 				entryPoint: "vertexShader",
@@ -135,6 +132,26 @@ export class Wrapper {
 				}]
 			}
 		});
+
+		// TODO Function to create models for cuboid, sphere, etc.
+		this.models = [
+			// Create rectangle
+			new Rectangle(this.device, {
+				width: 1.75
+			}),
+			// Create triangles
+			new Triangle(this.device, {
+				width: 1.5,
+				shiftTop: -0.75,
+				colors: "cmy"
+			}),
+			new Triangle(this.device),
+			new Triangle(this.device, {
+				width: 0.5,
+				shiftTop: 1.25,
+				colors: "100"
+			})
+		];
 	}
 
 	public setAmbientColour(red: number, green: number, blue: number) {
