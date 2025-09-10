@@ -57,8 +57,8 @@ export function normalize(vec: TVec3): TVec3 {
 
 export function cross(lhs: TVec3, rhs: TVec3): TVec3 {
 	return [
-		lhs[2] * rhs[1] - lhs[1] * rhs[2],
-		-(lhs[2] * rhs[0] - lhs[0] * rhs[2]),
-		lhs[1] * rhs[0] - lhs[0] * rhs[1]
+		lhs[1] * rhs[2] - lhs[2] * rhs[1],
+		lhs[2] * rhs[0] - lhs[0] * rhs[2],
+		lhs[0] * rhs[1] - lhs[1] * rhs[0]
 	];
 }

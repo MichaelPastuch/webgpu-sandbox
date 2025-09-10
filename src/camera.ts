@@ -4,8 +4,9 @@ import { cross, identity, matrixMultiply, normalize, vector, type TMatrix, type 
 
 export class Camera {
 
-	/** Z is "forward" */
-	private direction: TVec3 = [0, 0, 1];
+	private position: TVec3 = [0, 0, 1];
+	/** x = right, y = up, z = "backwards" */
+	private direction: TVec3 = [0, 0, -1];
 	/** Assume always normalised */
 	private up: TVec3 = [0, 1, 0];
 
@@ -24,10 +25,12 @@ export class Camera {
 	}
 
 	public updateView(from: TVec3, to: TVec3, up?: TVec3) {
+		this.position = from;
 		// Vector from camera position to reference point
 		this.direction = normalize(vector(from, to));
+		console.debug(this.direction);
 		if (up != null) {
-			this.up = up;
+			this.up = normalize(up);
 		}
 	}
 
@@ -42,7 +45,7 @@ export class Camera {
 			right[0], right[1], right[2], 0,
 			up[0], up[1], up[2], 0,
 			-this.direction[0], -this.direction[1], -this.direction[2], 0,
-			0, 0, 0, 1
+			this.position[0], this.position[1], this.position[2], 1
 		];
 	}
 
