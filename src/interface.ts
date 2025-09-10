@@ -25,8 +25,33 @@ interface IGpuTextureView {
 }
 
 /** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUTexture) */
-interface IGpuTexture {
+export interface IGpuTexture {
+	readonly label: string;
+	readonly format: string;
+	// TODO varios other common properties from IGpuTextureDescriptor
 	createView(): IGpuTextureView;
+	destroy(): void;
+}
+
+/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createTexture) */
+interface IGpuTextureDescriptor {
+	readonly label?: string;
+	readonly dimension?: "1d" | "2d" | "3d";
+	// TODO Add formats as they are required
+	/** [WebGPU Reference](https://gpuweb.github.io/gpuweb/#enumdef-gputextureformat) */
+	readonly format: "rgba8uint" |
+	// Depth/stencil
+	"stencil8" | "depth16unorm" | "depth24plus" | "depth24plus-stencil8" | "depth32float";
+	// Subject to dimension
+	// TODO create typings for each dimension with size constraints
+	readonly size: [width: number] | [number, number] | [number, number, number] |
+	{ readonly width: number; } | { readonly width: number; readonly height: number; } |
+	{ readonly width: number; readonly height: number; readonly depthOrArrayLayers: number };
+	/** GPUTextureUsage */
+	readonly usage: unknown;
+	readonly mipLevelCount?: number;
+	readonly sampleCount?: 1 | 4;
+	readonly viewFormats?: ReadonlyArray<IGpuTextureDescriptor["format"]>;
 }
 
 export interface IGpuCanvasContext {
@@ -39,6 +64,7 @@ export interface IGpuCanvasContext {
 
 interface IGpuBindGroupLayoutDescriptorEntry {
 	readonly binding: number;
+	/** GPUShaderStage */
 	readonly visibility: unknown;
 }
 
@@ -142,11 +168,16 @@ interface IPipelineDescriptorConfig {
 	readonly vertex: IVertexPipeline;
 	// https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createRenderPipeline#depthstencil_object_structure
 	readonly depthStencil?: {
+		readonly format?: string;
 		readonly depthBias?: number;
 		readonly depthBiasClamp?: number;
 		readonly depthBiasSlopeScale?: number;
 		readonly depthWriteEnabled?: boolean;
-		// TODO populate from MDN docs
+		readonly depthCompare?: "always" | "never" |
+		"less" | "less-equal" |
+		"greater" | "greater-equal" |
+		"equal" | "not-equal";
+		// TODO populate from MDN docs stencil stuff
 	};
 	// https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createRenderPipeline#primitive_object_structure
 	readonly primitive?: {
@@ -178,6 +209,7 @@ export interface IGpuBuffer { }
 
 interface IGpuBufferOpts {
 	readonly size: number;
+	/** GPUBufferUsage */
 	readonly usage: unknown;
 }
 
@@ -227,6 +259,15 @@ interface IRenderPassDescriptor {
 		readonly reosolveTarget?: IGpuTextureView;
 		readonly view: IGpuTextureView;
 	}>;
+	readonly depthStencilAttachment?: {
+		/** From 0.0 to 1.0 inclusive */
+		readonly depthClearValue?: number;
+		readonly depthLoadOp?: "clear" | "load";
+		readonly depthReadOnly?: boolean;
+		readonly depthStoreOp?: "discard" | "store";
+		// TODO stencil opts
+		readonly view: IGpuTextureView;
+	};
 }
 
 /** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUCommandBuffer) */
@@ -243,6 +284,7 @@ interface IGpuCommandEncoder {
 export interface IGpuDevice {
 	createShaderModule(opts: IGpuShaderModuleOpts): IGpuShaderModule;
 	createBuffer(opts: IGpuBufferOpts): IGpuBuffer;
+	createTexture(descriptor: IGpuTextureDescriptor): IGpuTexture;
 	createBindGroupLayout(descriptor: IGpuBindGroupLayoutDescriptor): IGpuBindGroupLayout;
 	createBindGroup(descriptor: IGpuBindGroupDescriptor): IGpuBindGroup;
 	createPipelineLayout(descriptor: IGpuPipelineLayoutDescriptor): IGpuPipelineLayout;

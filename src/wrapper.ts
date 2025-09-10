@@ -1,6 +1,6 @@
 import { Camera } from "./camera";
-import { SHADER_BUFFER, VERTEX_STAGE } from "./constants";
-import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type TCanvasFormat, type TRgba } from "./interface";
+import { DEPTH_TEXTURE, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
+import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat, type TRgba } from "./interface";
 import type { IModel } from "./models/interface";
 import { Rectangle } from "./models/rectangle";
 import { Triangle } from "./models/trangle";
@@ -17,10 +17,15 @@ export class Wrapper {
 			throw Error("gpu.requestAdapter failed");
 		}
 		const device = await adapter.requestDevice();
-		return new Wrapper(context, gpu.getPreferredCanvasFormat(), device);
+		return new Wrapper(
+			device, context, gpu.getPreferredCanvasFormat(),
+			canvas.width, canvas.height
+		);
 	}
 
 	private readonly module: IGpuShaderModule;
+
+	private readonly depthTexture: IGpuTexture;
 
 	private readonly camera: Camera;
 
@@ -33,9 +38,11 @@ export class Wrapper {
 	private readonly models: IModel[];
 
 	private constructor(
+		private readonly device: IGpuDevice,
 		private readonly context: IGpuCanvasContext,
 		private readonly format: TCanvasFormat,
-		private readonly device: IGpuDevice
+		width: number,
+		height: number
 	) {
 
 		// Prepare context for WebGPU rendering
@@ -44,6 +51,13 @@ export class Wrapper {
 			format: this.format,
 			alphaMode: "premultiplied"
 		});
+
+		this.depthTexture = this.device.createTexture({
+			format: "depth24plus",
+			size: [width, height],
+			usage: DEPTH_TEXTURE
+		});
+
 
 		// TODO Function to create shader module
 		// Prepare shaders
@@ -57,7 +71,7 @@ export class Wrapper {
 
 		// TODO Get aspect ratio from canvas, update when canvas is resized
 		this.camera = new Camera(this.device);
-		// this.camera.updateProjection(1, 100, 4.0 / 3.0, 90);
+		// this.camera.updateProjection(1, 100, width / height, 90);
 		// this.camera.updateView([0, 0, -1], [-0.1, 0.1, 0]);
 		this.camera.writeBuffer();
 
@@ -105,6 +119,11 @@ export class Wrapper {
 			primitive: {
 				cullMode: "back",
 				topology: "triangle-list"
+			},
+			depthStencil: {
+				depthWriteEnabled: true,
+				depthCompare: "less",
+				format: this.depthTexture.format
 			},
 			vertex: {
 				module: this.module,
@@ -176,7 +195,13 @@ export class Wrapper {
 				loadOp: "clear",
 				storeOp: "store",
 				view: this.context.getCurrentTexture().createView()
-			}]
+			}],
+			depthStencilAttachment: {
+				depthClearValue: 1.0,
+				depthLoadOp: "clear",
+				depthStoreOp: "store",
+				view: this.depthTexture.createView()
+			}
 		});
 
 		// Render pipeline and bind groups

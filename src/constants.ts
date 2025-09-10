@@ -7,6 +7,14 @@ declare const GPUBufferUsage: {
 	readonly UNIFORM: number;
 }
 
+declare const GPUTextureUsage: {
+	readonly COPY_SRC: number;
+	readonly COPY_DST: number;
+	readonly RENDER_ATTACHMENT: number;
+	readonly STORAGE_BINDING: number;
+	readonly TEXTURE_BINDING: number;
+}
+
 declare const GPUShaderStage: {
 	readonly VERTEX: number;
 	readonly FRAGMENT: number;
@@ -15,6 +23,9 @@ declare const GPUShaderStage: {
 /** Bind data for usage in vertex shader */
 export const VERTEX_BUFFER = GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST;
 export const INDEX_BUFFER = GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST;
+
+/** Bind texture for storing depth */
+export const DEPTH_TEXTURE = GPUTextureUsage.RENDER_ATTACHMENT;
 
 /** Bind arbitrary data for usage in vertex/fragment shaders */
 export const SHADER_BUFFER = GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM;
