@@ -1,6 +1,9 @@
-import { SHADER_BUFFER } from "./constants";
-import type { IGpuBuffer, IGpuDevice } from "./interface";
-import { cross, identity, matrixMultiply, normalize, vector, type TMatrix, type TVec3 } from "./utils";
+import { HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
+import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
+import { cross, matrixMultiply, normalize, vector, type TMatrix, type TVec3 } from "./utils";
+
+// WebGPU -> x and y range from -1 to +1, z ranges from 0 to 1
+// Any values outside of this range are clipped
 
 export class Camera {
 
@@ -11,16 +14,33 @@ export class Camera {
 	private up: TVec3 = [0, 1, 0];
 
 	private near: number = 1;
-	private far: number = 10;
+	private far: number = 4;
 	private aspect: number = 1;
-	private perspective: number = 1;
+	private perspective: number = 3;
 
-	public readonly buffer: IGpuBuffer;
+	public readonly viewProjBuffer: IGpuBuffer;
+	public readonly bindGroupLayout: IGpuBindGroupLayout;
+	public readonly bindGroup: IGpuBindGroup;
 
 	constructor(private readonly device: IGpuDevice) {
-		this.buffer = this.device.createBuffer({
+		this.viewProjBuffer = this.device.createBuffer({
 			size: 4 * 16,
 			usage: SHADER_BUFFER
+		});
+		// Bind camera matrices data for vertex/fragment shader usage
+		this.bindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: VERTEX_STAGE,
+				buffer: { type: "uniform" }
+			}]
+		});
+		this.bindGroup = this.device.createBindGroup({
+			layout: this.bindGroupLayout,
+			entries: [{
+				binding: 0,
+				resource: { buffer: this.viewProjBuffer }
+			}]
 		});
 	}
 
@@ -55,27 +75,27 @@ export class Camera {
 		this.near = near;
 		this.far = far;
 		this.aspect = aspectRatio;
-		this.perspective = 1.0 / Math.tan(0.5 * fovY);
+		this.perspective = Math.tan(HALF_PI - fovY * 0.5);
+		console.debug(this.perspective);
 	}
 
 	public get projectionMatrix(): TMatrix {
-		return identity;
-		const delta = this.near - this.far;
+		const zScale = this.far / (this.far - this.near);
 		return [
 			this.perspective / this.aspect, 0, 0, 0,
 			0, this.perspective, 0, 0,
-			0, 0, (this.far + this.near) / delta, (2.0 * this.far * this.near) / delta,
-			0, 0, -1, 0
+			0, 0, zScale, -1,
+			0, 0, this.near * zScale, 0
 		];
 	}
 
 	public writeBuffer() {
-		const matrix = new Float32Array(
-			matrixMultiply(this.viewMatrix, this.projectionMatrix)
+		const viewProjMatrix = new Float32Array(
+			matrixMultiply(this.projectionMatrix, this.viewMatrix)
 		);
 		this.device.queue.writeBuffer(
-			this.buffer, 0,
-			matrix, 0, matrix.length
+			this.viewProjBuffer, 0,
+			viewProjMatrix, 0, viewProjMatrix.length
 		);
 	}
 

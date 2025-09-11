@@ -95,7 +95,7 @@ interface IGpuBindGroupLayoutDescriptor {
 	readonly entries: ReadonlyArray<TGpuBindGroupLayoutDescriptorEntries>;
 }
 
-interface IGpuBindGroupLayout {
+export interface IGpuBindGroupLayout {
 	readonly label: string;
 }
 

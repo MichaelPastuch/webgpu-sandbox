@@ -1,3 +1,5 @@
+export const HALF_PI = Math.PI * 0.5;
+
 // Annotate global bitwise values
 declare const GPUBufferUsage: {
 	readonly COPY_SRC: number;
