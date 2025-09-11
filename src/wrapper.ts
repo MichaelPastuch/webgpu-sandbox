@@ -28,12 +28,14 @@ export class Wrapper {
 	private readonly depthTexture: IGpuTexture;
 
 	private readonly camera: Camera;
+	private cameraX = 0.0;
+	private cameraY = 0.0;
 
 	private readonly ambientBuffer: IGpuBuffer;
 	private clearValue: TRgba = [0, 0, 0, 0];
 
-	private bindGroup: IGpuBindGroup;
-	private renderPipeline: IGpuRenderPipeline;
+	private readonly bindGroup: IGpuBindGroup;
+	private readonly renderPipeline: IGpuRenderPipeline;
 
 	private readonly models: IModel[];
 
@@ -58,7 +60,6 @@ export class Wrapper {
 			usage: DEPTH_TEXTURE
 		});
 
-
 		// TODO Function to create shader module
 		// Prepare shaders
 		const shaderSrc = document.getElementById("shaders");
@@ -69,11 +70,10 @@ export class Wrapper {
 			code: shaderSrc.textContent
 		});
 
-		// TODO Get aspect ratio from canvas, update when canvas is resized
+		// TODO update projection when canvas is resized
 		this.camera = new Camera(this.device);
-		// this.camera.updateProjection(1, 100, width / height, 90);
-		// this.camera.updateView([0, 0, -1], [-0.1, 0.1, 0]);
-		this.camera.writeBuffer();
+		this.camera.updateProjection(1, 4, width / height, Math.PI * 0.2);
+		this.nudgeCamera(0, 0);
 
 		// Assemble ambient colour buffer
 		this.ambientBuffer = this.device.createBuffer({
@@ -89,26 +89,19 @@ export class Wrapper {
 				binding: 0,
 				visibility: VERTEX_STAGE,
 				buffer: { type: "uniform" }
-			}, {
-				binding: 1,
-				visibility: VERTEX_STAGE,
-				buffer: { type: "uniform" }
 			}]
 		});
 		this.bindGroup = this.device.createBindGroup({
 			layout: bindGroupLayout,
 			entries: [{
 				binding: 0,
-				resource: { buffer: this.camera.buffer }
-			}, {
-				binding: 1,
 				resource: { buffer: this.ambientBuffer }
 			}]
 		});
 
 		// Create pipeline layout
 		const pipelineLayout = this.device.createPipelineLayout({
-			bindGroupLayouts: [bindGroupLayout]
+			bindGroupLayouts: [this.camera.bindGroupLayout, bindGroupLayout]
 		});
 
 		// TODO Functions to create/update pipeline with entryPoints and constants
@@ -156,7 +149,7 @@ export class Wrapper {
 		this.models = [
 			// Create rectangle
 			new Rectangle(this.device, {
-				width: 1.75
+				width: 2.5
 			}),
 			// Create triangles
 			new Triangle(this.device, {
@@ -180,6 +173,14 @@ export class Wrapper {
 			this.ambientBuffer, 0,
 			ambientCols, 0, ambientCols.length
 		);
+	}
+
+	public nudgeCamera(nudgeX: number, nudgeY: number) {
+		this.cameraX += nudgeX;
+		this.cameraY += nudgeY;
+		this.camera.updateView([this.cameraX, this.cameraY, 1], [0, 0, 0]);
+		// this.camera.updateView([0, 0, 1], [this.cameraX, this.cameraY, 0]);
+		this.camera.writeBuffer();
 	}
 
 	// TODO Scenegraph system
@@ -206,7 +207,8 @@ export class Wrapper {
 
 		// Render pipeline and bind groups
 		passEncoder.setPipeline(this.renderPipeline);
-		passEncoder.setBindGroup(0, this.bindGroup);
+		passEncoder.setBindGroup(0, this.camera.bindGroup);
+		passEncoder.setBindGroup(1, this.bindGroup);
 
 		// Draw models
 		this.models.forEach((model) => model.draw(passEncoder));

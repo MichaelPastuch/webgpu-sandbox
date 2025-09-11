@@ -33,6 +33,25 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	// First render
 	wrapper.render();
 
+	const MOVE_SCALE = 0.05;
+	document.addEventListener("keydown", (event) => {
+		switch (event.code) {
+			case "ArrowUp":
+				wrapper.nudgeCamera(0, MOVE_SCALE);
+				break;
+			case "ArrowDown":
+				wrapper.nudgeCamera(0, -MOVE_SCALE);
+				break;
+			case "ArrowLeft":
+				wrapper.nudgeCamera(-MOVE_SCALE, 0);
+				break;
+			case "ArrowRight":
+				wrapper.nudgeCamera(MOVE_SCALE, 0);
+				break;
+		}
+		wrapper.render();
+	});
+
 	// Redraw with different background on key press
 	document.addEventListener("keypress", (event) => {
 		if (event.key === "Enter") {
