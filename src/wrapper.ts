@@ -1,5 +1,5 @@
 import { Camera } from "./camera";
-import { DEPTH_TEXTURE, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
+import { DEG_TO_RAD, DEPTH_TEXTURE, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat, type TRgba } from "./interface";
 import type { Model } from "./models/model";
 import { Rectangle } from "./models/rectangle";
@@ -30,9 +30,7 @@ export class Wrapper {
 	private readonly ambientBuffer: IGpuBuffer;
 	private clearValue: TRgba = [0, 0, 0, 0];
 
-	private readonly camera: Camera;
-	private cameraX = 0.0;
-	private cameraY = 0.0;
+	public readonly camera: Camera;
 
 	private readonly globalBindGroup: IGpuBindGroup;
 
@@ -73,8 +71,8 @@ export class Wrapper {
 
 		// TODO update projection when canvas is resized
 		this.camera = new Camera(this.device);
-		this.camera.updateProjection(1, 5, width / height, Math.PI * 0.2);
-		this.nudgeCamera(0, 0);
+		this.camera.updateProjection(1, 5, width / height, 30 * DEG_TO_RAD);
+		this.positionCamera(0, 0, 1);
 
 		// Assemble ambient colour buffer
 		this.ambientBuffer = this.device.createBuffer({
@@ -197,15 +195,13 @@ export class Wrapper {
 		);
 	}
 
-	public nudgeCamera(nudgeX: number, nudgeY: number) {
-		this.cameraX += nudgeX;
-		this.cameraY += nudgeY;
-		// this.camera.updateView([this.cameraX, this.cameraY, 1], [0, 0, 0]);
-		this.camera.updateView([0, 0, 1], [this.cameraX, this.cameraY, 0]);
-		// this.camera.updateView(
-		// 	[this.cameraX, this.cameraY, 1],
-		// 	[this.cameraX, this.cameraY, 0]
-		// );
+	public positionCamera(moveX: number, moveY: number, moveZ: number) {
+		this.camera.updateView([moveX, moveY, moveZ], [0, 0, 0]);
+		this.camera.writeBuffer();
+	}
+
+	public updateFov(newFov: number) {
+		this.camera.updateFov(newFov);
 		this.camera.writeBuffer();
 	}
 

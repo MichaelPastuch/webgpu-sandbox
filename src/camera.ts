@@ -74,6 +74,10 @@ export class Camera {
 		this.near = near;
 		this.far = far;
 		this.aspect = aspectRatio;
+		this.updateFov(fovY);
+	}
+
+	public updateFov(fovY: number) {
 		this.perspective = Math.tan(HALF_PI - fovY * 0.5);
 	}
 
