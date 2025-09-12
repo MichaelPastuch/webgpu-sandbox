@@ -1,11 +1,13 @@
+import { DEG_TO_RAD } from "./constants";
 import { type IGpu } from "./interface";
 import { Wrapper } from "./wrapper";
 
+const main = document.getElementById("main");
+if (main == null) {
+	throw Error("Unable to mount application to #main");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-	const main = document.getElementById("main");
-	if (main == null) {
-		throw Error("Unable to mount application to #main");
-	}
 
 	const WIDTH = 1024;
 	const HEIGHT = 768;
@@ -27,6 +29,24 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 });
 
+function widget(label: string, innitialValue: string, onChange: (value: number) => void) {
+	const container = document.createElement("div");
+	const lbl = document.createElement("pre");
+	lbl.innerText = label;
+	container.append(lbl);
+	const input = document.createElement("input");
+	input.type = "number";
+	input.value = innitialValue;
+	input.addEventListener("input", function () {
+		const num = Number.parseInt(this.value);
+		if (Number.isFinite(num)) {
+			onChange(num);
+		}
+	});
+	container.append(input);
+	main?.append(container);
+}
+
 async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	const wrapper = await Wrapper.create(canvas, gpu);
 
@@ -41,36 +61,44 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		keyTracker.delete(event.key);
 	});
 
-	let ambient = 8;
-	// Colour presets
-	const presetKeys = new Set([
-		"-", "=", "_", "+", "[", "{", "]", "}", "'", "@", "#", "~", "/", "*"
-	]);
-	// Ambient brightness range from 1-10
-	const brightnessKeys = new Set<string>([
-		"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"
-	]);
-	// Crudely change ambient colour with different background on key press
-	document.addEventListener("keypress", (event) => {
-		if (brightnessKeys.has(event.key)) {
-			ambient = Number.parseInt(event.key);
-			const newAmbient = ambient / 10.0;
-			wrapper.setAmbientColour(newAmbient, newAmbient, newAmbient);
-		}
-		if (presetKeys.has(event.key)) {
-			const code = event.key.charCodeAt(0);
-			wrapper.setAmbientColour(
-				(code % 83) / 83.0,
-				(code % 19) / 19.0,
-				(code % 43) / 43.0
-			);
-		}
+	widget("Y Field of View", "30", (newValue) => {
+		wrapper.updateFov(newValue * DEG_TO_RAD);
+	});
+
+	let brightness = 80;
+	let redMul = 100;
+	let greenMul = 100;
+	let blueMul = 100;
+	const scalar = 0.0001;
+	function updateAmbient() {
+		wrapper.setAmbientColour(
+			redMul * brightness * scalar,
+			greenMul * brightness * scalar,
+			blueMul * brightness * scalar
+		);
+	}
+	widget("Brightness %", String(brightness), (newValue) => {
+		brightness = newValue;
+		updateAmbient();
+	});
+	widget("Red %", String(redMul), (newValue) => {
+		redMul = newValue;
+		updateAmbient();
+	});
+	widget("Green %", String(greenMul), (newValue) => {
+		greenMul = newValue;
+		updateAmbient();
+	});
+	widget("Blue %", String(blueMul), (newValue) => {
+		blueMul = newValue;
+		updateAmbient();
 	});
 
 	// Track camera move velocity
-	const MOVE_SCALE = 0.025;
-	let moveX = 0;
-	let moveY = 0;
+	const MOVE_SCALE = 0.0125;
+	let posX = 0;
+	let posY = 0;
+	let posZ = 1;
 
 	// Establish render loop
 	// Frame rate and sumulation time are currently tied
@@ -86,20 +114,27 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 
 			// A "frame" has passed, update simulation
 			if (deltaTime >= FRAME_DURATION) {
-
 				// Handle input
-				moveY = keyTracker.has("w")
-					? MOVE_SCALE
-					: keyTracker.has("s")
-						? -MOVE_SCALE
-						: 0;
-				moveX = keyTracker.has("a")
-					? MOVE_SCALE
-					: keyTracker.has("d")
-						? -MOVE_SCALE
-						: 0;
+				if (keyTracker.has("a")) {
+					posX -= MOVE_SCALE;
+				}
+				if (keyTracker.has("d")) {
+					posX += MOVE_SCALE;
+				}
+				if (keyTracker.has("w")) {
+					posY += MOVE_SCALE;
+				}
+				if (keyTracker.has("s")) {
+					posY -= MOVE_SCALE;
+				}
+				if (keyTracker.has("[")) {
+					posZ += MOVE_SCALE;
+				}
+				if (keyTracker.has("]")) {
+					posZ -= MOVE_SCALE;
+				}
 				// Update sim
-				wrapper.nudgeCamera(moveX, moveY);
+				wrapper.positionCamera(posX, posY, posZ);
 
 				lastFrameTime = frameTime - (deltaTime % FRAME_DURATION);
 				// Draw results

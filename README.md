@@ -8,9 +8,13 @@ Annotating the WebGPU API, and getting started with a simple "hello triangle" pi
 
 [MDN WebGPU](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API)
 
+Articles for learning WebGPU
+
+[WebGPU Fundamentals](https://webgpufundamentals.org/)
+
 Brushing up on Computer graphics and concepts like clipping space and the view/projection matrices:
 
-[Introduction to Computer Graphics](https://math.hws.edu/graphicsbook/index.html)
+[Introduction to Computer Graphics](https://math.hws.edu/graphicsbook/c9/index.html)
 
 Best practices when rendering many objects:
 
