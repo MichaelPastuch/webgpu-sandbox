@@ -1,7 +1,7 @@
 import { Color } from "../color";
 import { INDEX_BUFFER, VERTEX_BUFFER } from "../constants";
-import type { IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder } from "../interface";
-import type { IModel } from "./interface";
+import type { IGpuBindGroupLayout, IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder } from "../interface";
+import { Model } from "./model";
 
 interface IRectangleConfig {
 	readonly width?: number;
@@ -10,17 +10,18 @@ interface IRectangleConfig {
 	readonly colors?: string;
 }
 
-export class Rectangle implements IModel {
+export class Rectangle extends Model {
 
 	private readonly vertexBuffer: IGpuBuffer;
 	private readonly indexBuffer: IGpuBuffer;
 
 	/** Triangle centered at origin */
-	constructor(private readonly device: IGpuDevice, {
+	constructor(device: IGpuDevice, bindGroupLayout: IGpuBindGroupLayout, {
 		width = 1,
 		height = width,
 		colors = "ygbr"
 	}: IRectangleConfig = {}) {
+		super(device, bindGroupLayout);
 		const x = 0.5 * width;
 		const y = 0.5 * height;
 		// Assemble rectangle (xyzw, rgba)

@@ -1,7 +1,7 @@
 import { Color } from "../color";
 import { VERTEX_BUFFER } from "../constants";
-import type { IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder } from "../interface";
-import type { IModel } from "./interface";
+import type { IGpuBindGroupLayout, IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder } from "../interface";
+import { Model } from "./model";
 
 interface ITriangleConfig {
 	readonly width?: number;
@@ -12,17 +12,18 @@ interface ITriangleConfig {
 	readonly colors?: string;
 }
 
-export class Triangle implements IModel {
+export class Triangle extends Model {
 
 	private readonly vertexBuffer: IGpuBuffer;
 
 	/** Triangle centered at origin */
-	constructor(private readonly device: IGpuDevice, {
+	constructor(device: IGpuDevice, bindGroupLayout: IGpuBindGroupLayout, {
 		width = 1,
 		height = width,
 		shiftTop = 0,
 		colors = "rgb"
 	}: ITriangleConfig = {}) {
+		super(device, bindGroupLayout);
 		const x = 0.5 * width;
 		const y = 0.5 * height;
 		// Assemble triangle (xyzw, rgba)
@@ -47,8 +48,8 @@ export class Triangle implements IModel {
 		);
 	}
 
-	public draw(passEncoder: IGpuRenderPassEncoder, slot = 0) {
-		passEncoder.setVertexBuffer(slot, this.vertexBuffer);
+	public draw(passEncoder: IGpuRenderPassEncoder) {
+		passEncoder.setVertexBuffer(0, this.vertexBuffer);
 		passEncoder.draw(3);
 	}
 
