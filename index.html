@@ -9,8 +9,9 @@
 	<main id="main"></main>
 
 	<script id="shaders" type="text/wgsl">
-		@group(0) @binding(0) var<uniform> camera: mat4x4f;
-		@group(1) @binding(0) var<uniform> ambient: vec3f;
+		@group(0) @binding(0) var<uniform> ambient: vec3f;
+		@group(1) @binding(0) var<uniform> camera: mat4x4f;
+		@group(2) @binding(0) var<uniform> model: mat4x4f;
 
 		struct VertexOut {
 			@builtin(position) position: vec4f,
@@ -23,7 +24,7 @@
 			@location(1) color: vec4f
 		) -> VertexOut {
 			return VertexOut(
-				position * camera,
+				position * model * camera,
 				vec4f(color.xyz * ambient, color.w)
 			);
 		}

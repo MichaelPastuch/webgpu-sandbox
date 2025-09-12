@@ -7,8 +7,8 @@ import { cross, matrixMultiply, normalize, vector, type TMatrix, type TVec3 } fr
 
 export class Camera {
 
-	private position: TVec3 = [0, 0, 1];
 	/** x = right, y = up, z = "backwards" */
+	private position: TVec3 = [0, 0, 1];
 	private direction: TVec3 = [0, 0, -1];
 	/** Assume always normalised */
 	private up: TVec3 = [0, 1, 0];
@@ -44,19 +44,18 @@ export class Camera {
 		});
 	}
 
+	// "Classic" gluLookAt view transform
+	// https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml
 	public updateView(from: TVec3, to: TVec3, up?: TVec3) {
 		this.position = from;
 		// Vector from camera position to reference point
 		this.direction = normalize(vector(from, to));
-		console.debug(this.direction);
 		if (up != null) {
 			this.up = normalize(up);
 		}
 	}
 
-	// "Classic" gluLookAt view transform
-	// https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml
-	public get viewMatrix(): TMatrix {
+	private get viewMatrix(): TMatrix {
 		// Get right with assumed up
 		const right = cross(this.direction, this.up);
 		// Get "correct" up with respect to view direction
@@ -76,10 +75,10 @@ export class Camera {
 		this.far = far;
 		this.aspect = aspectRatio;
 		this.perspective = Math.tan(HALF_PI - fovY * 0.5);
-		console.debug(this.perspective);
 	}
 
-	public get projectionMatrix(): TMatrix {
+	private get projectionMatrix(): TMatrix {
+		// return identity;
 		const zScale = this.far / (this.far - this.near);
 		return [
 			this.perspective / this.aspect, 0, 0, 0,

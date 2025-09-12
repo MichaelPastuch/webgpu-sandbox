@@ -1,7 +1,7 @@
 import { Camera } from "./camera";
 import { DEPTH_TEXTURE, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat, type TRgba } from "./interface";
-import type { IModel } from "./models/interface";
+import type { Model } from "./models/model";
 import { Rectangle } from "./models/rectangle";
 import { Triangle } from "./models/trangle";
 
@@ -27,17 +27,18 @@ export class Wrapper {
 
 	private readonly depthTexture: IGpuTexture;
 
+	private readonly ambientBuffer: IGpuBuffer;
+	private clearValue: TRgba = [0, 0, 0, 0];
+
 	private readonly camera: Camera;
 	private cameraX = 0.0;
 	private cameraY = 0.0;
 
-	private readonly ambientBuffer: IGpuBuffer;
-	private clearValue: TRgba = [0, 0, 0, 0];
+	private readonly globalBindGroup: IGpuBindGroup;
 
-	private readonly bindGroup: IGpuBindGroup;
+	private readonly models: Model[];
+
 	private readonly renderPipeline: IGpuRenderPipeline;
-
-	private readonly models: IModel[];
 
 	private constructor(
 		private readonly device: IGpuDevice,
@@ -72,7 +73,7 @@ export class Wrapper {
 
 		// TODO update projection when canvas is resized
 		this.camera = new Camera(this.device);
-		this.camera.updateProjection(1, 4, width / height, Math.PI * 0.2);
+		this.camera.updateProjection(1, 5, width / height, Math.PI * 0.2);
 		this.nudgeCamera(0, 0);
 
 		// Assemble ambient colour buffer
@@ -83,25 +84,38 @@ export class Wrapper {
 		});
 		this.setAmbientColour(0.8, 0.8, 0.8);
 
-		// Bind data for vertex/fragment shader usage
-		const bindGroupLayout = this.device.createBindGroupLayout({
+		// Bind global data for vertex/fragment shader usage
+		const globalBindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
 				binding: 0,
 				visibility: VERTEX_STAGE,
 				buffer: { type: "uniform" }
 			}]
 		});
-		this.bindGroup = this.device.createBindGroup({
-			layout: bindGroupLayout,
+		this.globalBindGroup = this.device.createBindGroup({
+			layout: globalBindGroupLayout,
 			entries: [{
 				binding: 0,
 				resource: { buffer: this.ambientBuffer }
 			}]
 		});
 
+		// Bind per-model data
+		const modelBindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: VERTEX_STAGE,
+				buffer: { type: "uniform" }
+			}]
+		});
+
 		// Create pipeline layout
 		const pipelineLayout = this.device.createPipelineLayout({
-			bindGroupLayouts: [this.camera.bindGroupLayout, bindGroupLayout]
+			bindGroupLayouts: [
+				globalBindGroupLayout,
+				this.camera.bindGroupLayout,
+				modelBindGroupLayout
+			]
 		});
 
 		// TODO Functions to create/update pipeline with entryPoints and constants
@@ -148,21 +162,29 @@ export class Wrapper {
 		// TODO Function to create models for cuboid, sphere, etc.
 		this.models = [
 			// Create rectangle
-			new Rectangle(this.device, {
+			new Rectangle(this.device, modelBindGroupLayout, {
 				width: 2.5
-			}),
+			})
+				.translate(0, 0, 8)
+				.writeBuffer(),
 			// Create triangles
-			new Triangle(this.device, {
+			new Triangle(this.device, modelBindGroupLayout, {
 				width: 1.5,
 				shiftTop: -0.75,
 				colors: "cmy"
-			}),
-			new Triangle(this.device),
-			new Triangle(this.device, {
+			})
+				.translate(-1, 0, 7)
+				.writeBuffer(),
+			new Triangle(this.device, modelBindGroupLayout)
+				.translate(0, 0, 6)
+				.writeBuffer(),
+			new Triangle(this.device, modelBindGroupLayout, {
 				width: 0.5,
 				shiftTop: 1.25,
 				colors: "100"
 			})
+				.translate(1, 0, 5)
+				.writeBuffer()
 		];
 	}
 
@@ -178,8 +200,12 @@ export class Wrapper {
 	public nudgeCamera(nudgeX: number, nudgeY: number) {
 		this.cameraX += nudgeX;
 		this.cameraY += nudgeY;
-		this.camera.updateView([this.cameraX, this.cameraY, 1], [0, 0, 0]);
-		// this.camera.updateView([0, 0, 1], [this.cameraX, this.cameraY, 0]);
+		// this.camera.updateView([this.cameraX, this.cameraY, 1], [0, 0, 0]);
+		this.camera.updateView([0, 0, 1], [this.cameraX, this.cameraY, 0]);
+		// this.camera.updateView(
+		// 	[this.cameraX, this.cameraY, 1],
+		// 	[this.cameraX, this.cameraY, 0]
+		// );
 		this.camera.writeBuffer();
 	}
 
@@ -207,11 +233,14 @@ export class Wrapper {
 
 		// Render pipeline and bind groups
 		passEncoder.setPipeline(this.renderPipeline);
-		passEncoder.setBindGroup(0, this.camera.bindGroup);
-		passEncoder.setBindGroup(1, this.bindGroup);
+		passEncoder.setBindGroup(0, this.globalBindGroup);
+		passEncoder.setBindGroup(1, this.camera.bindGroup);
 
 		// Draw models
-		this.models.forEach((model) => model.draw(passEncoder));
+		this.models.forEach((model) => {
+			passEncoder.setBindGroup(2, model.bindGroup);
+			model.draw(passEncoder);
+		});
 
 		// Complete render pass
 		passEncoder.end();
