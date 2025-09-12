@@ -55,6 +55,10 @@ export function normalize(vec: TVec3): TVec3 {
 	return [vec[0] / mag, vec[1] / mag, vec[2] / mag];
 }
 
+export function dot(lhs: TVec3, rhs: TVec3): number {
+	return lhs[0] * rhs[0] + lhs[1] * rhs[1] + lhs[2] * rhs[2];
+}
+
 export function cross(lhs: TVec3, rhs: TVec3): TVec3 {
 	return [
 		lhs[1] * rhs[2] - lhs[2] * rhs[1],

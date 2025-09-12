@@ -1,6 +1,6 @@
 import { HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
-import { cross, matrixMultiply, normalize, vector, type TMatrix, type TVec3 } from "./utils";
+import { cross, dot, matrixMultiply, normalize, vector, type TMatrix, type TVec3 } from "./utils";
 
 // WebGPU -> x and y range from -1 to +1, z ranges from 0 to 1
 // Any values outside of this range are clipped
@@ -44,27 +44,27 @@ export class Camera {
 		});
 	}
 
-	// "Classic" gluLookAt view transform
-	// https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml
-	public updateView(from: TVec3, to: TVec3, up?: TVec3) {
-		this.position = from;
+	// "Classic" D3DXMatrixLookAtRH view transform
+	// https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixlookatrh
+	public updateView(position: TVec3, focus: TVec3, up?: TVec3) {
+		this.position = position;
 		// Vector from camera position to reference point
-		this.direction = normalize(vector(from, to));
+		this.direction = normalize(vector(focus, position));
 		if (up != null) {
 			this.up = normalize(up);
 		}
 	}
 
 	private get viewMatrix(): TMatrix {
-		// Get right with assumed up
-		const right = cross(this.direction, this.up);
-		// Get "correct" up with respect to view direction
-		const up = cross(normalize(right), this.direction);
+		const eye = this.position;
+		const forward = this.direction;
+		const right = normalize(cross(this.up, forward));
+		const up = cross(forward, right);
 		return [
-			right[0], right[1], right[2], 0,
-			up[0], up[1], up[2], 0,
-			-this.direction[0], -this.direction[1], -this.direction[2], 0,
-			this.position[0], this.position[1], this.position[2], 1
+			right[0], up[0], forward[0], 0,
+			right[1], up[1], forward[1], 0,
+			right[2], up[2], forward[2], 0,
+			-dot(right, eye), -dot(up, eye), -dot(right, eye), 1
 		];
 	}
 
@@ -82,7 +82,6 @@ export class Camera {
 	}
 
 	private get projectionMatrix(): TMatrix {
-		// return identity;
 		const zScale = this.far / (this.far - this.near);
 		return [
 			this.perspective / this.aspect, 0, 0, 0,
@@ -94,7 +93,7 @@ export class Camera {
 
 	public writeBuffer() {
 		const viewProjMatrix = new Float32Array(
-			matrixMultiply(this.projectionMatrix, this.viewMatrix)
+			matrixMultiply(this.viewMatrix, this.projectionMatrix)
 		);
 		this.device.queue.writeBuffer(
 			this.viewProjBuffer, 0,

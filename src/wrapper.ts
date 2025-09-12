@@ -71,7 +71,7 @@ export class Wrapper {
 
 		// TODO update projection when canvas is resized
 		this.camera = new Camera(this.device);
-		this.camera.updateProjection(1, 5, width / height, 30 * DEG_TO_RAD);
+		this.camera.updateProjection(1, 100, width / height, 30 * DEG_TO_RAD);
 		this.positionCamera(0, 0, 1);
 
 		// Assemble ambient colour buffer
