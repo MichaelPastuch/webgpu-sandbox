@@ -100,7 +100,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 						: 0;
 				// Update sim
 				wrapper.nudgeCamera(moveX, moveY);
-				// 
+
 				lastFrameTime = frameTime - (deltaTime % FRAME_DURATION);
 				// Draw results
 				wrapper.render();
@@ -113,5 +113,8 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		});
 	}
 	frame();
+
+	// Debug 1 frame draw
+	// wrapper.render();
 
 }

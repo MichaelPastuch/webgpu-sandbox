@@ -278,6 +278,12 @@ interface IGpuCommandBuffer {
 /** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUCommandEncoder) */
 interface IGpuCommandEncoder {
 	beginRenderPass(descriptor: IRenderPassDescriptor): IGpuRenderPassEncoder;
+	copyBufferToBuffer(source: IGpuBuffer, destination: IGpuBuffer): void;
+	copyBufferToBuffer(source: IGpuBuffer, destination: IGpuBuffer, size: number): void;
+	copyBufferToBuffer(
+		source: IGpuBuffer, sourceOffset: number,
+		destination: IGpuBuffer, destinationOffset: number, size: number
+	): void;
 	finish(descriptor?: { readonly label?: string }): IGpuCommandBuffer;
 }
 
