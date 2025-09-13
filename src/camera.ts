@@ -18,11 +18,21 @@ export class Camera {
 	private aspect: number = 1;
 	private perspective: number = 3;
 
+	public readonly viewBuffer: IGpuBuffer;
+	public readonly projBuffer: IGpuBuffer;
 	public readonly viewProjBuffer: IGpuBuffer;
 	public readonly bindGroupLayout: IGpuBindGroupLayout;
 	public readonly bindGroup: IGpuBindGroup;
 
 	constructor(private readonly device: IGpuDevice) {
+		this.viewBuffer = this.device.createBuffer({
+			size: 4 * 16,
+			usage: SHADER_BUFFER
+		});
+		this.projBuffer = this.device.createBuffer({
+			size: 4 * 16,
+			usage: SHADER_BUFFER
+		});
 		this.viewProjBuffer = this.device.createBuffer({
 			size: 4 * 16,
 			usage: SHADER_BUFFER
@@ -33,12 +43,26 @@ export class Camera {
 				binding: 0,
 				visibility: VERTEX_STAGE,
 				buffer: { type: "uniform" }
+			}, {
+				binding: 1,
+				visibility: VERTEX_STAGE,
+				buffer: { type: "uniform" }
+			}, {
+				binding: 2,
+				visibility: VERTEX_STAGE,
+				buffer: { type: "uniform" }
 			}]
 		});
 		this.bindGroup = this.device.createBindGroup({
 			layout: this.bindGroupLayout,
 			entries: [{
 				binding: 0,
+				resource: { buffer: this.viewBuffer }
+			}, {
+				binding: 1,
+				resource: { buffer: this.projBuffer }
+			}, {
+				binding: 2,
 				resource: { buffer: this.viewProjBuffer }
 			}]
 		});
@@ -60,16 +84,40 @@ export class Camera {
 		const forward = this.direction;
 		const right = normalize(cross(this.up, forward));
 		const up = cross(forward, right);
+
+		// D3DXMatrixLookAtRH
+		// return [
+		// 	right[0], up[0], forward[0], 0,
+		// 	right[1], up[1], forward[1], 0,
+		// 	right[2], up[2], forward[2], 0,
+		// 	-dot(right, eye), -dot(up, eye), -dot(forward, eye), 1
+		// ];
+		// Transposed D3DXMatrixLookAtRH
 		return [
-			right[0], up[0], forward[0], 0,
-			right[1], up[1], forward[1], 0,
-			right[2], up[2], forward[2], 0,
-			-dot(right, eye), -dot(up, eye), -dot(right, eye), 1
+			right[0], right[1], right[2], dot(right, eye),
+			up[0], up[1], up[2], dot(up, eye),
+			forward[0], forward[1], forward[2], dot(forward, eye),
+			0, 0, 0, 1
 		];
+
+		// Look at
+		// return [
+		// 	right[0], right[1], right[2], eye[0],
+		// 	up[0], up[1], up[2], eye[1],
+		// 	forward[0], forward[1], forward[2], eye[2],
+		// 	0, 0, 0, 1
+		// ];
+		// Transposed look at
+		// return [
+		// 	right[0], up[0], forward[0], 0,
+		// 	right[1], up[1], forward[1], 0,
+		// 	right[2], up[2], forward[2], 0,
+		// 	eye[0], eye[1], eye[2], 1
+		// ];
 	}
 
-	// "Classic" gluPerspective projection transform
-	// https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluPerspective.xml
+	// Perspective projection transform
+	// https://webgpufundamentals.org/webgpu/lessons/webgpu-perspective-projection.html
 	public updateProjection(near: number, far: number, aspectRatio: number, fovY: number) {
 		this.near = near;
 		this.far = far;
@@ -82,22 +130,34 @@ export class Camera {
 	}
 
 	private get projectionMatrix(): TMatrix {
-		const zScale = this.far / (this.far - this.near);
+		const zScale = -1 / (this.near - this.far);
 		return [
 			this.perspective / this.aspect, 0, 0, 0,
 			0, this.perspective, 0, 0,
-			0, 0, zScale, -1,
-			0, 0, this.near * zScale, 0
+			0, 0, this.far * zScale, -1,
+			0, 0, this.near * this.far * zScale, 0
 		];
 	}
 
 	public writeBuffer() {
-		const viewProjMatrix = new Float32Array(
-			matrixMultiply(this.viewMatrix, this.projectionMatrix)
+		const viewMatrix = this.viewMatrix;
+		const viewData = new Float32Array(viewMatrix);
+		this.device.queue.writeBuffer(
+			this.viewBuffer, 0,
+			viewData, 0, viewData.length
+		);
+		const projMatrix = this.projectionMatrix;
+		const projData = new Float32Array(projMatrix);
+		this.device.queue.writeBuffer(
+			this.projBuffer, 0,
+			projData, 0, projData.length
+		);
+		const viewProjData = new Float32Array(
+			matrixMultiply(projMatrix, viewMatrix)
 		);
 		this.device.queue.writeBuffer(
 			this.viewProjBuffer, 0,
-			viewProjMatrix, 0, viewProjMatrix.length
+			viewProjData, 0, viewProjData.length
 		);
 	}
 
