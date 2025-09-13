@@ -1,3 +1,4 @@
+import { TWO_PI } from "./constants";
 
 export type TVec3 = [number, number, number];
 
@@ -61,8 +62,21 @@ export function dot(lhs: TVec3, rhs: TVec3): number {
 
 export function cross(lhs: TVec3, rhs: TVec3): TVec3 {
 	return [
+		// Xyzzy
 		lhs[1] * rhs[2] - lhs[2] * rhs[1],
 		lhs[2] * rhs[0] - lhs[0] * rhs[2],
 		lhs[0] * rhs[1] - lhs[1] * rhs[0]
 	];
+}
+
+/** Add a delta to a given angle and wrap in the range 0 - 2Pi */
+export function wrapRadians(radians: number, delta: number) {
+	const newRadians = radians + delta;
+	if (newRadians > TWO_PI) {
+		return newRadians - TWO_PI;
+	} else if (newRadians < 0) {
+		return newRadians + TWO_PI;
+	} else {
+		return newRadians;
+	}
 }
