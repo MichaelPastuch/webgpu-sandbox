@@ -71,7 +71,7 @@ export class Wrapper {
 
 		// TODO update projection when canvas is resized
 		this.camera = new Camera(this.device);
-		this.camera.updateProjection(1, 1000, width / height, 30 * DEG_TO_RAD);
+		this.camera.updateProjection(1, 100, width / height, 45 * DEG_TO_RAD);
 		this.positionCamera(0, 0, 1);
 
 		// Assemble ambient colour buffer
@@ -163,7 +163,7 @@ export class Wrapper {
 			new Rectangle(this.device, modelBindGroupLayout, {
 				width: 5
 			})
-				.translate(0, 0, 20)
+				.translate(0, 0, 12)
 				.writeBuffer(),
 			// Create triangles
 			new Triangle(this.device, modelBindGroupLayout, {
@@ -171,17 +171,17 @@ export class Wrapper {
 				shiftTop: -0.75,
 				colors: "cmy"
 			})
-				.translate(-1, 0, 15)
+				.translate(-1, 0, 9)
 				.writeBuffer(),
 			new Triangle(this.device, modelBindGroupLayout)
-				.translate(0, 0, 10)
+				.translate(0, 0, 6)
 				.writeBuffer(),
 			new Triangle(this.device, modelBindGroupLayout, {
 				width: 0.5,
 				shiftTop: 1.25,
 				colors: "100"
 			})
-				.translate(1, 0, 5)
+				.translate(1, 0, 3)
 				.writeBuffer()
 		];
 	}

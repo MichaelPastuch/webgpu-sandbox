@@ -1,4 +1,4 @@
-import { HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
+import { DEG_TO_RAD, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
 import { cross, dot, matrixMultiply, normalize, vector, type TMatrix, type TVec3 } from "./utils";
 
@@ -117,7 +117,7 @@ export class Camera {
 	}
 
 	// Perspective projection transform
-	// https://webgpufundamentals.org/webgpu/lessons/webgpu-perspective-projection.html
+	// https://www.youtube.com/watch?v=U0_ONQQ5ZNM
 	public updateProjection(near: number, far: number, aspectRatio: number, fovY: number) {
 		this.near = near;
 		this.far = far;
@@ -126,16 +126,40 @@ export class Camera {
 	}
 
 	public updateFov(fovY: number) {
-		this.perspective = Math.tan(HALF_PI - fovY * 0.5);
+		this.perspective = Math.tan(fovY * 0.5);
 	}
 
-	private get projectionMatrix(): TMatrix {
+	/** Perspective projection, distant objects shrink (orthographic * perspective) */
+	private get perspProjectionMatrix(): TMatrix {
+		// Assume viewpoint looks down z axis
+		// Define perspective bottom and right planes from vertical fov
+		const bottom = this.near * this.perspective;
+		const right = this.near * this.aspect * this.perspective;
 		const zScale = -1 / (this.near - this.far);
+		// Use w to "divide" everything by z, therefore z component needs to be z^2
 		return [
-			this.perspective / this.aspect, 0, 0, 0,
-			0, this.perspective, 0, 0,
-			0, 0, this.far * zScale, -1,
-			0, 0, this.near * this.far * zScale, 0
+			this.near / right, 0, 0, 0,
+			0, this.near / bottom, 0, 0,
+			0, 0, this.far * zScale, -this.far * this.near * zScale,
+			0, 0, 1, 0
+		];
+	}
+
+	/** Orthographic projection, objects are their set size irregardless of distance */
+	private get orthoProjectionMatrix(): TMatrix {
+		// Assume viewpoint looks down z axis
+		// Assume x ranges from -10 to +10
+		const width = 20;
+		const height = width / this.aspect;
+		const depth = this.far - this.near
+		return [
+			// x = -1 to +1
+			2 / width, 0, 0, 0,
+			// y = -1 to +1
+			0, 2 / height, 0, 0,
+			// z = 0 to +1
+			0, 0, 1 / depth, -1 / depth,
+			0, 0, 0, 1
 		];
 	}
 
@@ -146,7 +170,7 @@ export class Camera {
 			this.viewBuffer, 0,
 			viewData, 0, viewData.length
 		);
-		const projMatrix = this.projectionMatrix;
+		const projMatrix = this.perspProjectionMatrix;
 		const projData = new Float32Array(projMatrix);
 		this.device.queue.writeBuffer(
 			this.projBuffer, 0,
