@@ -1,4 +1,4 @@
-import { DEG_TO_RAD, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
+import { SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
 import { cross, dot, matrixMultiply, normalize, vector, type TMatrix, type TVec3 } from "./utils";
 
@@ -7,6 +7,8 @@ import { cross, dot, matrixMultiply, normalize, vector, type TMatrix, type TVec3
 
 export class Camera {
 
+	private perspectiveMode = true;
+
 	/** x = right, y = up, z = "backwards" */
 	private position: TVec3 = [0, 0, 1];
 	private direction: TVec3 = [0, 0, -1];
@@ -14,9 +16,9 @@ export class Camera {
 	private up: TVec3 = [0, 1, 0];
 
 	private near: number = 1;
-	private far: number = 4;
+	private far: number = 100;
 	private aspect: number = 1;
-	private perspective: number = 3;
+	private perspective: number = 0.4;
 
 	public readonly viewBuffer: IGpuBuffer;
 	public readonly projBuffer: IGpuBuffer;
@@ -70,50 +72,32 @@ export class Camera {
 
 	// "Classic" D3DXMatrixLookAtRH view transform
 	// https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixlookatrh
-	public updateView(position: TVec3, focus: TVec3, up?: TVec3) {
+	public updateViewDirection(position: TVec3, direction: TVec3, up?: TVec3) {
 		this.position = position;
 		// Vector from camera position to reference point
-		this.direction = normalize(vector(focus, position));
+		this.direction = normalize(direction);
 		if (up != null) {
 			this.up = normalize(up);
 		}
 	}
 
-	private get viewMatrix(): TMatrix {
-		const eye = this.position;
-		const forward = this.direction;
-		const right = normalize(cross(this.up, forward));
-		const up = cross(forward, right);
+	public updateViewFocus(position: TVec3, focus: TVec3, up?: TVec3) {
+		this.updateViewDirection(position, vector(position, focus), up);
+	}
 
-		// D3DXMatrixLookAtRH
-		// return [
-		// 	right[0], up[0], forward[0], 0,
-		// 	right[1], up[1], forward[1], 0,
-		// 	right[2], up[2], forward[2], 0,
-		// 	-dot(right, eye), -dot(up, eye), -dot(forward, eye), 1
-		// ];
-		// Transposed D3DXMatrixLookAtRH
+	private get viewMatrix(): TMatrix {
+		const pos = this.position;
+		// Assemble orthonormal vectors for camera space
+		const fwd = this.direction;
+		const right = normalize(cross(this.up, fwd));
+		const up = cross(fwd, right);
+		// Translate and rotate the world back to the camera position
 		return [
-			right[0], right[1], right[2], dot(right, eye),
-			up[0], up[1], up[2], dot(up, eye),
-			forward[0], forward[1], forward[2], dot(forward, eye),
+			right[0], right[1], right[2], -dot(right, pos),
+			up[0], up[1], up[2], -dot(up, pos),
+			fwd[0], fwd[1], fwd[2], -dot(fwd, pos),
 			0, 0, 0, 1
 		];
-
-		// Look at
-		// return [
-		// 	right[0], right[1], right[2], eye[0],
-		// 	up[0], up[1], up[2], eye[1],
-		// 	forward[0], forward[1], forward[2], eye[2],
-		// 	0, 0, 0, 1
-		// ];
-		// Transposed look at
-		// return [
-		// 	right[0], up[0], forward[0], 0,
-		// 	right[1], up[1], forward[1], 0,
-		// 	right[2], up[2], forward[2], 0,
-		// 	eye[0], eye[1], eye[2], 1
-		// ];
 	}
 
 	// Perspective projection transform
@@ -170,7 +154,9 @@ export class Camera {
 			this.viewBuffer, 0,
 			viewData, 0, viewData.length
 		);
-		const projMatrix = this.perspProjectionMatrix;
+		const projMatrix = this.perspectiveMode
+			? this.perspProjectionMatrix
+			: this.orthoProjectionMatrix;
 		const projData = new Float32Array(projMatrix);
 		this.device.queue.writeBuffer(
 			this.projBuffer, 0,

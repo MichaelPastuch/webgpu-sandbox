@@ -196,7 +196,10 @@ export class Wrapper {
 	}
 
 	public positionCamera(moveX: number, moveY: number, moveZ: number) {
-		this.camera.updateView([moveX, moveY, moveZ], [0, 0, 0]);
+		// Focus at the mid-point of all shapes
+		this.camera.updateViewFocus([moveX, moveY, moveZ], [0, 0, 6]);
+		// Move focus from a little bit back
+		// this.camera.updateViewFocus([0, 0, -1], [moveX, moveY, moveZ]);
 		this.camera.writeBuffer();
 	}
 
