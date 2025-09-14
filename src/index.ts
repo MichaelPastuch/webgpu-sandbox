@@ -29,14 +29,32 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 });
 
-function widget(label: string, innitialValue: string, onChange: (value: number) => void) {
+interface IWidgetConfig {
+	readonly label: string;
+	readonly initialValue: number;
+	readonly type?: "number" | "range";
+	readonly min?: number;
+	readonly max?: number;
+	onChange(value: number): void;
+}
+function widget({
+	label, initialValue,
+	type = "range", min, max,
+	onChange
+}: IWidgetConfig) {
 	const container = document.createElement("div");
 	const lbl = document.createElement("pre");
 	lbl.innerText = label;
 	container.append(lbl);
 	const input = document.createElement("input");
-	input.type = "number";
-	input.value = innitialValue;
+	input.type = type;
+	input.value = String(initialValue);
+	if (min != null) {
+		input.min = String(min);
+	}
+	if (max != null) {
+		input.max = String(max);
+	}
 	input.addEventListener("input", function () {
 		const num = Number.parseInt(this.value);
 		if (Number.isFinite(num)) {
@@ -47,6 +65,7 @@ function widget(label: string, innitialValue: string, onChange: (value: number) 
 	main?.append(container);
 }
 
+// TODO Support "halting" render & sim with "Escape" key
 async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	const wrapper = await Wrapper.create(canvas, gpu);
 
@@ -61,14 +80,17 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		keyTracker.delete(event.key);
 	});
 
-	widget("Y Field of View", "30", (newValue) => {
-		wrapper.updateFov(newValue * DEG_TO_RAD);
+	widget({
+		label: "Y Field of View",
+		initialValue: 45, min: 1, max: 180,
+		onChange: (newFov) => wrapper.updateFov(newFov * DEG_TO_RAD)
 	});
 
 	let brightness = 80;
 	let redMul = 100;
 	let greenMul = 100;
 	let blueMul = 100;
+	// 1 / 100 * 100
 	const scalar = 0.0001;
 	function updateAmbient() {
 		wrapper.setAmbientColour(
@@ -77,73 +99,95 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			blueMul * brightness * scalar
 		);
 	}
-	widget("Brightness %", String(brightness), (newValue) => {
-		brightness = newValue;
-		updateAmbient();
+
+	widget({
+		label: "Brightness %",
+		initialValue: brightness, min: 0, max: 200,
+		onChange: (newValue) => {
+			brightness = newValue;
+			updateAmbient();
+		}
 	});
-	widget("Red %", String(redMul), (newValue) => {
-		redMul = newValue;
-		updateAmbient();
+	widget({
+		label: "Red %",
+		initialValue: redMul, min: 0, max: 200,
+		onChange: (newValue) => {
+			redMul = newValue;
+			updateAmbient();
+		}
 	});
-	widget("Green %", String(greenMul), (newValue) => {
-		greenMul = newValue;
-		updateAmbient();
+	widget({
+		label: "Green %",
+		initialValue: greenMul, min: 0, max: 200,
+		onChange: (newValue) => {
+			greenMul = newValue;
+			updateAmbient();
+		}
 	});
-	widget("Blue %", String(blueMul), (newValue) => {
-		blueMul = newValue;
-		updateAmbient();
+	widget({
+		label: "Blue %",
+		initialValue: blueMul, min: 0, max: 200,
+		onChange: (newValue) => {
+			blueMul = newValue;
+			updateAmbient();
+		}
 	});
 
 	// Track camera move velocity
-	const MOVE_SCALE = 0.0125;
-	let posX = 0;
-	let posY = 0;
-	let posZ = 1;
+	const MOVE_SCALE = 0.025;
+	let xPos = 0;
+	let yPos = 0;
+	let zPos = 0;
 
 	// Establish render loop
-	// Frame rate and sumulation time are currently tied
-	// Create sim cap/duration/delta and update simulation at different rate if needed
-	const FRAME_CAP = 60;
-	const FRAME_DURATION = 1000 / FRAME_CAP;
+	// Simulation and frame rate must be less than or equal to device refresh rate
+	const SIM_RATE = 60;
+	const SIM_DURATION = 1000 / SIM_RATE;
+	let lastSimTime = 0;
 
+	const FRAME_RATE = 60;
+	const FRAME_DURATION = 1000 / FRAME_RATE;
 	let lastFrameTime = 0;
-	function frame() {
-		// Halt until next frame
-		requestAnimationFrame((frameTime) => {
-			const deltaTime = frameTime - lastFrameTime;
 
-			// A "frame" has passed, update simulation
-			if (deltaTime >= FRAME_DURATION) {
+	function frame() {
+
+		requestAnimationFrame(function (timestamp) {
+
+			const simDeltaTime = timestamp - lastSimTime;
+			// A "tick" has passed, update simulation
+			if (simDeltaTime >= SIM_DURATION) {
+				lastSimTime = timestamp - (simDeltaTime % SIM_DURATION);
 				// Handle input
-				if (keyTracker.has("a")) {
-					posX -= MOVE_SCALE;
-				}
 				if (keyTracker.has("d")) {
-					posX += MOVE_SCALE;
+					xPos += MOVE_SCALE;
 				}
 				if (keyTracker.has("w")) {
-					posY += MOVE_SCALE;
+					yPos += MOVE_SCALE;
+				}
+				if (keyTracker.has("a")) {
+					xPos -= MOVE_SCALE;
 				}
 				if (keyTracker.has("s")) {
-					posY -= MOVE_SCALE;
+					yPos -= MOVE_SCALE;
 				}
 				if (keyTracker.has("[")) {
-					posZ += MOVE_SCALE;
+					zPos += MOVE_SCALE;
 				}
 				if (keyTracker.has("]")) {
-					posZ -= MOVE_SCALE;
+					zPos -= MOVE_SCALE;
 				}
-				// Update sim
-				wrapper.positionCamera(posX, posY, posZ);
+				wrapper.positionCamera(xPos, yPos, zPos);
+			}
 
-				lastFrameTime = frameTime - (deltaTime % FRAME_DURATION);
+			const frameDeltaTime = timestamp - lastFrameTime;
+			// A "frame" has passed, draw simulation state
+			if (frameDeltaTime >= FRAME_DURATION) {
+				lastFrameTime = timestamp - (frameDeltaTime % FRAME_DURATION);
 				// Draw results
 				wrapper.render();
 			}
 
-			// Draw at device refresh rate
-			// wrapper.render();
-
+			// Await next browser frame
 			frame();
 		});
 	}
