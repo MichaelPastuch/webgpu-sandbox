@@ -9,14 +9,14 @@ export class Camera {
 
 	private perspectiveMode = true;
 
-	/** x = right, y = up, z = "backwards" */
-	private position: TVec3 = [0, 0, 1];
-	private direction: TVec3 = [0, 0, -1];
+	/** x = right, y = up, z = forwards */
+	private position: TVec3 = [0, 0, 0];
+	private direction: TVec3 = [0, 0, 1];
 	/** Assume always normalised */
 	private up: TVec3 = [0, 1, 0];
 
 	private near: number = 1;
-	private far: number = 100;
+	private far: number = 20;
 	private aspect: number = 1;
 	private perspective: number = 0.4;
 
@@ -115,7 +115,6 @@ export class Camera {
 
 	/** Perspective projection, distant objects shrink (orthographic * perspective) */
 	private get perspProjectionMatrix(): TMatrix {
-		// Assume viewpoint looks down z axis
 		// Define perspective bottom and right planes from vertical fov
 		const bottom = this.near * this.perspective;
 		const right = this.near * this.aspect * this.perspective;
@@ -131,18 +130,16 @@ export class Camera {
 
 	/** Orthographic projection, objects are their set size irregardless of distance */
 	private get orthoProjectionMatrix(): TMatrix {
-		// Assume viewpoint looks down z axis
-		// Assume x ranges from -10 to +10
-		const width = 20;
-		const height = width / this.aspect;
-		const depth = this.far - this.near
+		// Assume projection is as wde as it is deep
+		const size = this.far - this.near
+		const height = size / this.aspect;
 		return [
 			// x = -1 to +1
-			2 / width, 0, 0, 0,
+			2 / size, 0, 0, 0,
 			// y = -1 to +1
 			0, 2 / height, 0, 0,
 			// z = 0 to +1
-			0, 0, 1 / depth, -1 / depth,
+			0, 0, 1 / size, -1 / size,
 			0, 0, 0, 1
 		];
 	}
