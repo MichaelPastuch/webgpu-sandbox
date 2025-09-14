@@ -2,21 +2,29 @@ import { TWO_PI } from "./constants";
 
 export type TVec3 = [number, number, number];
 
-export type TMatrix = [
+export type TQuat = [number, number, number, number];
+
+export type TMatrix3 = [
+	number, number, number,
+	number, number, number,
+	number, number, number
+];
+
+export type TMatrix4 = [
 	number, number, number, number,
 	number, number, number, number,
 	number, number, number, number,
 	number, number, number, number
 ];
 
-export const identity: TMatrix = [
+export const identity: TMatrix4 = [
 	1, 0, 0, 0,
 	0, 1, 0, 0,
 	0, 0, 1, 0,
 	0, 0, 0, 1
 ];
 
-export function matrixMultiply(lhs: TMatrix, rhs: TMatrix): TMatrix {
+export function matrixMultiply(lhs: TMatrix4, rhs: TMatrix4): TMatrix4 {
 	return [
 		// Row 1
 		lhs[0] * rhs[0] + lhs[1] * rhs[4] + lhs[2] * rhs[8] + lhs[3] * rhs[12],
@@ -66,6 +74,41 @@ export function cross(lhs: TVec3, rhs: TVec3): TVec3 {
 		lhs[1] * rhs[2] - lhs[2] * rhs[1],
 		lhs[2] * rhs[0] - lhs[0] * rhs[2],
 		lhs[0] * rhs[1] - lhs[1] * rhs[0]
+	];
+}
+
+/** Create quaternion from euler angles */
+export function fromRotation(pitch: number, yaw: number, roll: number = 0): TQuat {
+	// Consider profiling: cos(x)^2 = 1 - sin(x)^2
+	// Ideally the js optimiser uses the FSINCOS instruction here
+	const halfPitch = pitch * 0.5;
+	const halfRoll = roll * 0.5;
+	const halfYaw = yaw * 0.5;
+	const cU = Math.cos(halfPitch);
+	const sU = Math.sin(halfPitch);
+	const cV = Math.cos(halfYaw);
+	const sV = Math.sin(halfYaw);
+	const cW = Math.cos(halfRoll);
+	const sW = Math.sin(halfRoll);
+	return [
+		cU * cV * cW + sU * sV * sW,
+		sU * cV * cW - cU * sV * sW,
+		cU * sV * cW + sU * cV * sW,
+		cU * cV * sW - sU * sV * cW
+	];
+}
+
+/** Create 3x3 matrix rotation subset form quaternion */
+export function toMatrix([q0, q1, q2, q3]: TQuat): TMatrix3 {
+	const q1s2 = q1 * q1 * 2;
+	const q2s2 = q2 * q2 * 2;
+	const q3s2 = q3 * q3 * 2;
+	// Consider and profile if needed
+	// const q1q22 = 2 * q1 * q2;
+	return [
+		1 - q2s2 - q3s2, 2 * q1 * q2 - 2 * q0 * q3, 2 * q1 * q3 + 2 * q0 * q2,
+		2 * q1 * q2 + 2 * q0 * q3, 1 - q1s2 - q3s2, 2 * q2 * q3 - 2 * q0 * q1,
+		2 * q1 * q3 - 2 * q0 * q2, 2 * q2 * q3 + 2 * q0 * q1, 1 - q1s2 - q2s2
 	];
 }
 

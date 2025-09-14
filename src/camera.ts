@@ -1,6 +1,6 @@
 import { SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
-import { cross, dot, matrixMultiply, normalize, vector, type TMatrix, type TVec3 } from "./utils";
+import { cross, dot, matrixMultiply, normalize, vector, type TMatrix4, type TVec3 } from "./utils";
 
 // WebGPU -> x and y range from -1 to +1, z ranges from 0 to 1
 // Any values outside of this range are clipped
@@ -85,7 +85,7 @@ export class Camera {
 		this.updateViewDirection(position, vector(position, focus), up);
 	}
 
-	private get viewMatrix(): TMatrix {
+	private get viewMatrix(): TMatrix4 {
 		const pos = this.position;
 		// Assemble orthonormal vectors for camera space
 		const fwd = this.direction;
@@ -114,7 +114,7 @@ export class Camera {
 	}
 
 	/** Perspective projection, distant objects shrink (orthographic * perspective) */
-	private get perspProjectionMatrix(): TMatrix {
+	private get perspProjectionMatrix(): TMatrix4 {
 		// Define perspective bottom and right planes from vertical fov
 		const bottom = this.near * this.perspective;
 		const right = this.near * this.aspect * this.perspective;
@@ -129,7 +129,7 @@ export class Camera {
 	}
 
 	/** Orthographic projection, objects are their set size irregardless of distance */
-	private get orthoProjectionMatrix(): TMatrix {
+	private get orthoProjectionMatrix(): TMatrix4 {
 		// Assume projection is as wde as it is deep
 		const size = this.far - this.near
 		const height = size / this.aspect;

@@ -1,5 +1,5 @@
 import { Camera } from "./camera";
-import { DEG_TO_RAD, DEPTH_TEXTURE, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
+import { DEG_TO_RAD, DEPTH_TEXTURE, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat, type TRgba } from "./interface";
 import type { Model } from "./models/model";
 import { Rectangle } from "./models/rectangle";
@@ -160,9 +160,10 @@ export class Wrapper {
 		this.models = [
 			// Create rectangle
 			new Rectangle(this.device, modelBindGroupLayout, {
-				width: 5
+				width: 6
 			})
-				.translate(0, 0, 12)
+				.translate(0, -1.5, 6)
+				.rotate(HALF_PI, 0)
 				.writeBuffer(),
 			// Create triangles
 			new Triangle(this.device, modelBindGroupLayout, {
@@ -174,6 +175,7 @@ export class Wrapper {
 				.writeBuffer(),
 			new Triangle(this.device, modelBindGroupLayout)
 				.translate(0, 0, 6)
+				.rotate(0, 0, Math.PI)
 				.writeBuffer(),
 			new Triangle(this.device, modelBindGroupLayout, {
 				width: 0.5,
