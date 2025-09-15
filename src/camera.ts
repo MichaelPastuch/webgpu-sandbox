@@ -1,6 +1,6 @@
 import { SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
-import { cross, dot, matrixMultiply, normalize, vector, type TMatrix4, type TVec3 } from "./utils";
+import { cross, dot, matrixMultiply4, normalize, vector, type TMatrix4, type TVec3 } from "./utils";
 
 // WebGPU -> x and y range from -1 to +1, z ranges from 0 to 1
 // Any values outside of this range are clipped
@@ -160,7 +160,7 @@ export class Camera {
 			projData, 0, projData.length
 		);
 		const viewProjData = new Float32Array(
-			matrixMultiply(viewMatrix, projMatrix)
+			matrixMultiply4(viewMatrix, projMatrix)
 		);
 		this.device.queue.writeBuffer(
 			this.viewProjBuffer, 0,

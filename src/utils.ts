@@ -45,7 +45,24 @@ export function wrapRadians(angle: number, delta: number) {
 	}
 }
 
-export function matrixMultiply(lhs: TMatrix4, rhs: TMatrix4): TMatrix4 {
+export function matrixMultiply3(lhs: TMatrix3, rhs: TMatrix3): TMatrix3 {
+	return [
+		// Col 1
+		lhs[0] * rhs[0] + lhs[3] * rhs[1] + lhs[6] * rhs[2],
+		lhs[1] * rhs[0] + lhs[4] * rhs[1] + lhs[7] * rhs[2],
+		lhs[2] * rhs[0] + lhs[5] * rhs[1] + lhs[8] * rhs[2],
+		// Col 2
+		lhs[0] * rhs[3] + lhs[3] * rhs[4] + lhs[6] * rhs[5],
+		lhs[1] * rhs[3] + lhs[4] * rhs[4] + lhs[7] * rhs[5],
+		lhs[2] * rhs[3] + lhs[5] * rhs[4] + lhs[8] * rhs[5],
+		// Col 3
+		lhs[0] * rhs[6] + lhs[3] * rhs[7] + lhs[6] * rhs[8],
+		lhs[1] * rhs[6] + lhs[4] * rhs[7] + lhs[7] * rhs[8],
+		lhs[2] * rhs[6] + lhs[5] * rhs[7] + lhs[8] * rhs[8]
+	];
+}
+
+export function matrixMultiply4(lhs: TMatrix4, rhs: TMatrix4): TMatrix4 {
 	return [
 		// Col 1
 		lhs[0] * rhs[0] + lhs[4] * rhs[1] + lhs[8] * rhs[2] + lhs[12] * rhs[3],
