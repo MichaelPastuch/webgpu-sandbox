@@ -4,6 +4,15 @@ export type TVec3 = [number, number, number];
 
 export type TQuat = [number, number, number, number];
 
+/**
+ * NOTE
+ * WebGPU stores matrix values by columns, as opposed to by rows
+ * | 0 | 4 | 8 |12 |
+ * | 1 | 5 | 9 |13 |
+ * | 2 | 6 |10 |14 |
+ * | 3 | 7 |11 |15 |
+ */
+
 export type TMatrix3 = [
 	number, number, number,
 	number, number, number,
@@ -24,28 +33,40 @@ export const identity: TMatrix4 = [
 	0, 0, 0, 1
 ];
 
+/** Apply delta to a given angle and wrap in the range 0 - 2Pi */
+export function wrapRadians(angle: number, delta: number) {
+	const newRadians = angle + delta;
+	if (newRadians > TWO_PI) {
+		return newRadians - TWO_PI;
+	} else if (newRadians < 0) {
+		return TWO_PI + newRadians;
+	} else {
+		return newRadians;
+	}
+}
+
 export function matrixMultiply(lhs: TMatrix4, rhs: TMatrix4): TMatrix4 {
 	return [
-		// Row 1
-		lhs[0] * rhs[0] + lhs[1] * rhs[4] + lhs[2] * rhs[8] + lhs[3] * rhs[12],
-		lhs[0] * rhs[1] + lhs[1] * rhs[5] + lhs[2] * rhs[9] + lhs[3] * rhs[13],
-		lhs[0] * rhs[2] + lhs[1] * rhs[6] + lhs[2] * rhs[10] + lhs[3] * rhs[14],
-		lhs[0] * rhs[3] + lhs[1] * rhs[7] + lhs[2] * rhs[11] + lhs[3] * rhs[15],
-		// Row 2
-		lhs[4] * rhs[0] + lhs[5] * rhs[4] + lhs[6] * rhs[8] + lhs[7] * rhs[12],
-		lhs[4] * rhs[1] + lhs[5] * rhs[5] + lhs[6] * rhs[9] + lhs[7] * rhs[13],
-		lhs[4] * rhs[2] + lhs[5] * rhs[6] + lhs[6] * rhs[10] + lhs[7] * rhs[14],
-		lhs[4] * rhs[3] + lhs[5] * rhs[7] + lhs[6] * rhs[11] + lhs[7] * rhs[15],
-		// Row 3
-		lhs[8] * rhs[0] + lhs[9] * rhs[4] + lhs[10] * rhs[8] + lhs[11] * rhs[12],
-		lhs[8] * rhs[1] + lhs[9] * rhs[5] + lhs[10] * rhs[9] + lhs[11] * rhs[13],
-		lhs[8] * rhs[2] + lhs[9] * rhs[6] + lhs[10] * rhs[10] + lhs[11] * rhs[14],
-		lhs[8] * rhs[3] + lhs[9] * rhs[7] + lhs[10] * rhs[11] + lhs[11] * rhs[15],
-		// Row 4
-		lhs[12] * rhs[0] + lhs[13] * rhs[4] + lhs[14] * rhs[8] + lhs[15] * rhs[12],
-		lhs[12] * rhs[1] + lhs[13] * rhs[5] + lhs[14] * rhs[9] + lhs[15] * rhs[13],
-		lhs[12] * rhs[2] + lhs[13] * rhs[6] + lhs[14] * rhs[10] + lhs[15] * rhs[14],
-		lhs[12] * rhs[3] + lhs[13] * rhs[7] + lhs[14] * rhs[11] + lhs[15] * rhs[15]
+		// Col 1
+		lhs[0] * rhs[0] + lhs[4] * rhs[1] + lhs[8] * rhs[2] + lhs[12] * rhs[3],
+		lhs[1] * rhs[0] + lhs[5] * rhs[1] + lhs[9] * rhs[2] + lhs[13] * rhs[3],
+		lhs[2] * rhs[0] + lhs[6] * rhs[1] + lhs[10] * rhs[2] + lhs[14] * rhs[3],
+		lhs[3] * rhs[0] + lhs[7] * rhs[1] + lhs[11] * rhs[2] + lhs[15] * rhs[3],
+		// Col 2
+		lhs[0] * rhs[4] + lhs[4] * rhs[5] + lhs[8] * rhs[6] + lhs[12] * rhs[7],
+		lhs[1] * rhs[4] + lhs[5] * rhs[5] + lhs[9] * rhs[6] + lhs[13] * rhs[7],
+		lhs[2] * rhs[4] + lhs[6] * rhs[5] + lhs[10] * rhs[6] + lhs[14] * rhs[7],
+		lhs[3] * rhs[4] + lhs[7] * rhs[5] + lhs[11] * rhs[6] + lhs[15] * rhs[7],
+		// Col 3
+		lhs[0] * rhs[8] + lhs[4] * rhs[9] + lhs[8] * rhs[10] + lhs[12] * rhs[11],
+		lhs[1] * rhs[8] + lhs[5] * rhs[9] + lhs[9] * rhs[10] + lhs[13] * rhs[11],
+		lhs[2] * rhs[8] + lhs[6] * rhs[9] + lhs[10] * rhs[10] + lhs[14] * rhs[11],
+		lhs[3] * rhs[8] + lhs[7] * rhs[9] + lhs[11] * rhs[10] + lhs[15] * rhs[11],
+		// Col 4
+		lhs[0] * rhs[12] + lhs[4] * rhs[13] + lhs[8] * rhs[14] + lhs[12] * rhs[15],
+		lhs[1] * rhs[12] + lhs[5] * rhs[13] + lhs[9] * rhs[14] + lhs[13] * rhs[15],
+		lhs[2] * rhs[12] + lhs[6] * rhs[13] + lhs[10] * rhs[14] + lhs[14] * rhs[15],
+		lhs[3] * rhs[12] + lhs[7] * rhs[13] + lhs[11] * rhs[14] + lhs[15] * rhs[15]
 	];
 }
 
@@ -110,16 +131,4 @@ export function toMatrix([q0, q1, q2, q3]: TQuat): TMatrix3 {
 		2 * q1 * q2 + 2 * q0 * q3, 1 - q1s2 - q3s2, 2 * q2 * q3 - 2 * q0 * q1,
 		2 * q1 * q3 - 2 * q0 * q2, 2 * q2 * q3 + 2 * q0 * q1, 1 - q1s2 - q2s2
 	];
-}
-
-/** Add a delta to a given angle and wrap in the range 0 - 2Pi */
-export function wrapRadians(radians: number, delta: number) {
-	const newRadians = radians + delta;
-	if (newRadians > TWO_PI) {
-		return newRadians - TWO_PI;
-	} else if (newRadians < 0) {
-		return newRadians + TWO_PI;
-	} else {
-		return newRadians;
-	}
 }

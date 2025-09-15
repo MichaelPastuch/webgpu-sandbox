@@ -160,7 +160,7 @@ export class Camera {
 			projData, 0, projData.length
 		);
 		const viewProjData = new Float32Array(
-			matrixMultiply(projMatrix, viewMatrix)
+			matrixMultiply(viewMatrix, projMatrix)
 		);
 		this.device.queue.writeBuffer(
 			this.viewProjBuffer, 0,
