@@ -1,6 +1,6 @@
 import { SHADER_BUFFER } from "../constants";
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder } from "../interface";
-import { fromRotation, toMatrix, type TQuat, type TVec3 } from "../utils";
+import { fromRotation, matrixMultiply3, toMatrix, type TMatrix3, type TQuat, type TVec3 } from "../utils";
 
 export abstract class Model {
 
@@ -9,8 +9,9 @@ export abstract class Model {
 
 	private translation: TVec3 = [0, 0, 0];
 	private rotation: TQuat = [1, 0, 0, 0];
+	private scalar: number = 1;
 
-	// TODO scaling support
+	// TODO Skew support
 
 	constructor(protected readonly device: IGpuDevice, bindGroupLayout: IGpuBindGroupLayout) {
 		// Allocate buffer and bind group
@@ -39,12 +40,30 @@ export abstract class Model {
 		return this;
 	}
 
+	public scale(scale: number) {
+		this.scalar = scale;
+		return this;
+	}
+
+	private scaleRotate(rotation: TMatrix3) {
+		return matrixMultiply3([
+			this.scalar, 0, 0,
+			0, this.scalar, 0,
+			0, 0, this.scalar
+		], rotation);
+	}
+
 	public writeBuffer() {
 		const rotation = toMatrix(this.rotation);
+		// Skip scaling if not needed
+		const mat3 = this.scalar !== 1
+			? this.scaleRotate(rotation)
+			: rotation
+		// Merge scale & rotate into translation
 		const transformMatrix = new Float32Array([
-			rotation[0], rotation[1], rotation[2], this.translation[0],
-			rotation[3], rotation[4], rotation[5], this.translation[1],
-			rotation[6], rotation[7], rotation[8], this.translation[2],
+			mat3[0], mat3[1], mat3[2], this.translation[0],
+			mat3[3], mat3[4], mat3[5], this.translation[1],
+			mat3[6], mat3[7], mat3[8], this.translation[2],
 			0, 0, 0, 1
 		]);
 		this.device.queue.writeBuffer(

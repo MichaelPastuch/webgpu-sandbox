@@ -164,6 +164,7 @@ export class Wrapper {
 			})
 				.translate(0, -1.5, 6)
 				.rotate(HALF_PI, 0)
+				.scale(2)
 				.writeBuffer(),
 			// Create triangles
 			new Triangle(this.device, modelBindGroupLayout, {
