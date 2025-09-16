@@ -1,6 +1,6 @@
 import { Camera } from "./camera";
 import { DEG_TO_RAD, DEPTH_TEXTURE, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
-import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat, type TRgba } from "./interface";
+import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "./interface";
 import type { Model } from "./models/model";
 import { Rectangle } from "./models/rectangle";
 import { Triangle } from "./models/trangle";
@@ -29,7 +29,7 @@ export class Wrapper {
 	private readonly depthTexture: IGpuTexture;
 
 	private readonly ambientBuffer: IGpuBuffer;
-	private clearValue: TRgba = [0, 0, 0, 0];
+	private ambientColor: TVec3 = [0, 0, 0];
 
 	public readonly camera: Camera;
 
@@ -80,7 +80,7 @@ export class Wrapper {
 			size: 4 * 3,
 			usage: SHADER_BUFFER
 		});
-		this.setAmbientColour(0.8, 0.8, 0.8);
+		this.setAmbientColor(0.8, 0.8, 0.8);
 
 		// Bind global data for vertex/fragment shader usage
 		const globalBindGroupLayout = this.device.createBindGroupLayout({
@@ -189,35 +189,18 @@ export class Wrapper {
 		];
 	}
 
-	public setAmbientColour(red: number, green: number, blue: number) {
-		this.clearValue = [red, green, blue, 1];
-		const ambientCols = new Float32Array([red, green, blue]);
-		this.device.queue.writeBuffer(
-			this.ambientBuffer, 0,
-			ambientCols, 0, ambientCols.length
-		);
-	}
-
-	public positionCamera(moveX: number, moveY: number, moveZ: number) {
-		// Focus at the mid-point of all shapes
-		this.camera.updateViewFocus([moveX, moveY, moveZ], [0, 0, 6]);
-		// Move focus from a little bit back
-		// this.camera.updateViewFocus([0, 0, -1], [moveX, moveY, moveZ]);
-		this.camera.writeBuffer();
-	}
-
-	public orbitCamera(focus: TVec3, distance: number, pitch: number, yaw: number) {
-		this.camera.updateViewOrbital(focus, distance, pitch, yaw);
-		this.camera.writeBuffer();
-	}
-
-	public updateFov(newFov: number) {
-		this.camera.updateFov(newFov);
-		this.camera.writeBuffer();
+	public setAmbientColor(red: number, green: number, blue: number) {
+		this.ambientColor = [red, green, blue];
 	}
 
 	// TODO Scenegraph system
 	public render() {
+		// Assume ambient colour may have changed each frame
+		const ambientCols = new Float32Array(this.ambientColor);
+		this.device.queue.writeBuffer(
+			this.ambientBuffer, 0,
+			ambientCols, 0, ambientCols.length
+		);
 
 		// Assemble GPU work batch
 		const commandEncoder = this.device.createCommandEncoder();
@@ -225,7 +208,7 @@ export class Wrapper {
 		// Prepare render pass - clear canvas and draw triangle to it
 		const passEncoder = commandEncoder.beginRenderPass({
 			colorAttachments: [{
-				clearValue: this.clearValue,
+				clearValue: [...this.ambientColor, 1],
 				loadOp: "clear",
 				storeOp: "store",
 				view: this.context.getCurrentTexture().createView()

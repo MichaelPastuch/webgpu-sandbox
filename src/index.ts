@@ -119,13 +119,15 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			await canvas.requestPointerLock({
 				unadjustedMovement: true,
 			});
+			// TODO fullscreen and resize canvas accordingly
+			// await canvas.requestFullscreen();
 		}
 	});
 
 	widget({
 		label: "Y Field of View",
 		initialValue: 45, min: 1, max: 180,
-		onChange: (newFov) => wrapper.updateFov(newFov * DEG_TO_RAD)
+		onChange: (newFov) => wrapper.camera.updateFov(newFov * DEG_TO_RAD)
 	});
 
 	let brightness = 80;
@@ -135,7 +137,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	// 1 / 100 * 100
 	const scalar = 0.0001;
 	function updateAmbient() {
-		wrapper.setAmbientColour(
+		wrapper.setAmbientColor(
 			redMul * brightness * scalar,
 			greenMul * brightness * scalar,
 			blueMul * brightness * scalar
@@ -176,16 +178,17 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	});
 
 	// Track orbit camera angles
-	const ORBIT_SCALE = Math.PI * 0.0005;
-	let pitch = HALF_PI - 50 * ORBIT_SCALE;
-	let yaw = -HALF_PI + 50 * ORBIT_SCALE;
-	const zoom = 5;
+	// TODO Consider tracking pitch/yaw as integers, and convert to radians before render
+	const ORBIT_SCALE = Math.PI * 0.001;
+	let pitch = HALF_PI - 25 * ORBIT_SCALE;
+	let yaw = -HALF_PI + 25 * ORBIT_SCALE;
+	const distance = 5;
 
 	// Position camera focus
-	const MOVE_SCALE = 0.025;
+	const MOVE_SCALE = 0.05;
 	let xPos = 0;
 	let yPos = 0;
-	let zPos = 2;
+	let zPos = 0;
 
 	// Establish render loop
 	// Simulation and frame rate must be less than or equal to device refresh rate
@@ -228,19 +231,23 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 				if (keyTracker.has("a")) {
 					xPos -= MOVE_SCALE;
 				}
-				if (keyTracker.has("[")) {
+				if (keyTracker.has(" ")) {
 					yPos += MOVE_SCALE;
 				}
-				if (keyTracker.has("]")) {
+				if (keyTracker.has("Control")) {
 					yPos -= MOVE_SCALE;
 				}
-				wrapper.orbitCamera([xPos, yPos, zPos], zoom, pitch, yaw);
+				wrapper.camera.updateViewOrbital([xPos, yPos, zPos], distance, pitch, yaw);
 			}
 
 			const frameDeltaTime = timestamp - lastFrameTime;
 			// A "frame" has passed, draw simulation state
 			if (frameDeltaTime >= FRAME_DURATION) {
 				lastFrameTime = timestamp - (frameDeltaTime % FRAME_DURATION);
+
+				// Assume camera changes on every frame
+				wrapper.camera.writeBuffer();
+
 				// Draw results
 				wrapper.render();
 			}
