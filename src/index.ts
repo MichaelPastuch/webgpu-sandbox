@@ -74,12 +74,12 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	// TODO is there a way to get the "raw" keyboard key pressed?
 	// Pressing "w", is different to pressing "w" with shift held ("W")
 	const keyTracker = new Set<string>();
-	document.addEventListener("keydown", function (event) {
+	function keyDown(event: KeyboardEvent) {
 		keyTracker.add(event.key);
-	});
-	document.addEventListener("keyup", function (event) {
+	}
+	function keyUp(event: KeyboardEvent) {
 		keyTracker.delete(event.key);
-	});
+	}
 
 	// Track mouse key usage
 	const LEFT_CLICK = 0;
@@ -101,14 +101,19 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	}
 	document.addEventListener("pointerlockchange", function () {
 		if (document.pointerLockElement === canvas) {
+			document.addEventListener("keydown", keyDown, false);
+			document.addEventListener("keyup", keyUp, false);
 			document.addEventListener("mousemove", trackMovement, false);
 			document.addEventListener("mousedown", mouseDown, false);
 			document.addEventListener("mouseup", mouseUp, false);
 		} else {
+			document.removeEventListener("keydown", keyDown, false);
+			document.removeEventListener("keyup", keyUp, false);
 			document.removeEventListener("mousemove", trackMovement, false);
 			document.removeEventListener("mousedown", mouseDown, false);
 			document.removeEventListener("mouseup", mouseUp, false);
-			// "Unset" all mouse buttons
+			// "Unset" all mouse/keyboard tracking
+			keyTracker.clear();
 			buttonTracker.clear();
 		}
 	}, false);
@@ -200,79 +205,77 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	const FRAME_DURATION = 1000 / FRAME_RATE;
 	let lastFrameTime = 0;
 
-	function frame() {
+	function frame(timestamp: number) {
 
-		requestAnimationFrame(function (timestamp) {
+		const simDeltaTime = timestamp - lastSimTime;
+		// A "tick" has passed, update simulation
+		if (simDeltaTime >= SIM_DURATION) {
+			lastSimTime = timestamp - (simDeltaTime % SIM_DURATION);
 
-			const simDeltaTime = timestamp - lastSimTime;
-			// A "tick" has passed, update simulation
-			if (simDeltaTime >= SIM_DURATION) {
-				lastSimTime = timestamp - (simDeltaTime % SIM_DURATION);
+			if (buttonTracker.has(LEFT_CLICK)) {
+				console.debug("LEFT_CLICK");
+			}
+			// Record total mouse movement and reset
+			yaw = wrapRadians(yaw, -movementX * ORBIT_SCALE);
+			movementX = 0;
+			pitch = clampRadians(pitch, movementY * ORBIT_SCALE);
+			movementY = 0;
 
-				if (buttonTracker.has(LEFT_CLICK)) {
-					console.debug("LEFT_CLICK");
-				}
-				// Record total mouse movement and reset
-				yaw = wrapRadians(yaw, -movementX * ORBIT_SCALE);
-				movementX = 0;
-				pitch = clampRadians(pitch, movementY * ORBIT_SCALE);
-				movementY = 0;
-
-				// Handle input
-				let forward = 0;
-				let right = 0;
-				if (keyTracker.has("w")) {
-					forward += MOVE_SCALE;
-				}
-				if (keyTracker.has("s")) {
-					forward -= MOVE_SCALE;
-				}
-				if (keyTracker.has("d")) {
-					right += MOVE_SCALE;
-				}
-				if (keyTracker.has("a")) {
-					right -= MOVE_SCALE;
-				}
-				if (keyTracker.has(" ")) {
-					yPos += MOVE_SCALE;
-				}
-				if (keyTracker.has("Control")) {
-					yPos -= MOVE_SCALE;
-				}
-
-				// Move camera relative to the direction it is facing
-				if (forward != 0) {
-					const fwd = wrapper.camera.forward;
-					xPos += fwd[0] * forward;
-					zPos += fwd[2] * forward;
-				}
-				if (right != 0) {
-					const rgt = wrapper.camera.right;
-					xPos += rgt[0] * right;
-					zPos += rgt[2] * right;
-				}
-				wrapper.camera.updateViewOrbital([xPos, yPos, zPos], distance, pitch, yaw);
+			// Handle input
+			let forward = 0;
+			let right = 0;
+			if (keyTracker.has("w")) {
+				forward += MOVE_SCALE;
+			}
+			if (keyTracker.has("s")) {
+				forward -= MOVE_SCALE;
+			}
+			if (keyTracker.has("d")) {
+				right += MOVE_SCALE;
+			}
+			if (keyTracker.has("a")) {
+				right -= MOVE_SCALE;
+			}
+			if (keyTracker.has(" ")) {
+				yPos += MOVE_SCALE;
+			}
+			if (keyTracker.has("Control")) {
+				yPos -= MOVE_SCALE;
 			}
 
-			const frameDeltaTime = timestamp - lastFrameTime;
-			// A "frame" has passed, draw simulation state
-			if (frameDeltaTime >= FRAME_DURATION) {
-				lastFrameTime = timestamp - (frameDeltaTime % FRAME_DURATION);
-
-				// Assume camera changes on every frame
-				wrapper.camera.writeBuffer();
-
-				// Draw results
-				wrapper.render();
+			// Move camera relative to the direction it is facing
+			if (forward != 0) {
+				const fwd = wrapper.camera.forward;
+				xPos += fwd[0] * forward;
+				zPos += fwd[2] * forward;
 			}
+			if (right != 0) {
+				const rgt = wrapper.camera.right;
+				xPos += rgt[0] * right;
+				zPos += rgt[2] * right;
+			}
+			wrapper.camera.updateViewOrbital([xPos, yPos, zPos], distance, pitch, yaw);
+		}
 
-			// Await next browser frame
-			frame();
-		});
+		const frameDeltaTime = timestamp - lastFrameTime;
+		// A "frame" has passed, draw simulation state
+		if (frameDeltaTime >= FRAME_DURATION) {
+			lastFrameTime = timestamp - (frameDeltaTime % FRAME_DURATION);
+
+			// Assume camera changes on every frame
+			wrapper.camera.writeBuffer();
+
+			// Draw results
+			wrapper.render();
+		}
+
+		// Await next browser frame
+		requestAnimationFrame(frame);
 	}
-	frame();
+
+	// Start sim/render loop
+	requestAnimationFrame(frame);
 
 	// Debug 1 frame draw
 	// wrapper.render();
-
 }
