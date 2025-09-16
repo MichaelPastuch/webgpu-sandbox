@@ -88,12 +88,13 @@ export class Camera {
 	public updateViewOrbital(focus: TVec3, distance: number, pitch: number, yaw: number) {
 		// Use angles to position camera on sphere about origin
 		const sinPitch = Math.sin(pitch);
-		const position: TVec3 = [
-			distance * sinPitch * Math.cos(yaw),
-			distance * Math.cos(pitch),
-			distance * sinPitch * Math.sin(yaw)
-		];
-		this.updateViewDirection(position, vector(position, focus));
+		const orbitX = distance * sinPitch * Math.cos(yaw);
+		const orbitY = distance * Math.cos(pitch);
+		const orbitZ = distance * sinPitch * Math.sin(yaw);
+		this.updateViewDirection(
+			[focus[0] + orbitX, focus[1] + orbitY, focus[2] + orbitZ],
+			[-orbitX, -orbitY, -orbitZ]
+		);
 	}
 
 	private get viewMatrix(): TMatrix4 {
