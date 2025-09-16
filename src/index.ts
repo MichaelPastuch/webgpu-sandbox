@@ -1,5 +1,6 @@
-import { DEG_TO_RAD } from "./constants";
+import { DEG_TO_RAD, HALF_PI } from "./constants";
 import { type IGpu } from "./interface";
+import { clampRadians, wrapRadians } from "./utils";
 import { Wrapper } from "./wrapper";
 
 const main = document.getElementById("main");
@@ -134,10 +135,15 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	});
 
 	// Track camera move velocity
+
+	const ORBIT_SCALE = Math.PI * 0.01;
+	let pitch = HALF_PI - 5 * ORBIT_SCALE;
+	let yaw = -HALF_PI + 5 * ORBIT_SCALE;
+
 	const MOVE_SCALE = 0.025;
 	let xPos = 0;
 	let yPos = 0;
-	let zPos = 0;
+	let zPos = 5;
 
 	// Establish render loop
 	// Simulation and frame rate must be less than or equal to device refresh rate
@@ -158,17 +164,21 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			if (simDeltaTime >= SIM_DURATION) {
 				lastSimTime = timestamp - (simDeltaTime % SIM_DURATION);
 				// Handle input
-				if (keyTracker.has("d")) {
-					xPos += MOVE_SCALE;
-				}
 				if (keyTracker.has("w")) {
 					yPos += MOVE_SCALE;
-				}
-				if (keyTracker.has("a")) {
-					xPos -= MOVE_SCALE;
+					pitch = clampRadians(pitch, -ORBIT_SCALE);
 				}
 				if (keyTracker.has("s")) {
 					yPos -= MOVE_SCALE;
+					pitch = clampRadians(pitch, ORBIT_SCALE);
+				}
+				if (keyTracker.has("d")) {
+					xPos += MOVE_SCALE;
+					yaw = wrapRadians(yaw, ORBIT_SCALE);
+				}
+				if (keyTracker.has("a")) {
+					xPos -= MOVE_SCALE;
+					yaw = wrapRadians(yaw, -ORBIT_SCALE);
 				}
 				if (keyTracker.has("[")) {
 					zPos += MOVE_SCALE;
@@ -176,7 +186,8 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 				if (keyTracker.has("]")) {
 					zPos -= MOVE_SCALE;
 				}
-				wrapper.positionCamera(xPos, yPos, zPos);
+				// wrapper.positionCamera(xPos, yPos, zPos);
+				wrapper.orbitCamera(zPos, pitch, yaw);
 			}
 
 			const frameDeltaTime = timestamp - lastFrameTime;

@@ -205,6 +205,11 @@ export class Wrapper {
 		this.camera.writeBuffer();
 	}
 
+	public orbitCamera(distance: number, pitch: number, yaw: number) {
+		this.camera.updateViewOrbital([0, 0, 0], distance, pitch, yaw);
+		this.camera.writeBuffer();
+	}
+
 	public updateFov(newFov: number) {
 		this.camera.updateFov(newFov);
 		this.camera.writeBuffer();
