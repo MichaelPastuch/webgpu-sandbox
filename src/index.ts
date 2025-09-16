@@ -74,11 +74,30 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	// TODO is there a way to get the "raw" keyboard key pressed?
 	// Pressing "w", is different to pressing "w" with shift held ("W")
 	const keyTracker = new Set<string>();
-	document.addEventListener("keydown", (event) => {
+	document.addEventListener("keydown", function (event) {
 		keyTracker.add(event.key);
 	});
-	document.addEventListener("keyup", (event) => {
+	document.addEventListener("keyup", function (event) {
 		keyTracker.delete(event.key);
+	});
+
+	let movementX = 0;
+	let movementY = 0;
+	canvas.addEventListener("mousemove", function (event) {
+		movementX += event.movementX;
+		movementY += event.movementY;
+	});
+	const clickTracker = new Set<number>();
+	const LEFT_CLICK = 0;
+	// const RIGHT_CLICK = 2;
+	canvas.addEventListener("mousedown", function (event) {
+		clickTracker.add(event.button);
+	});
+	canvas.addEventListener("mouseup", function (event) {
+		clickTracker.delete(event.button);
+	});
+	canvas.addEventListener("mouseleave", function () {
+		clickTracker.clear();
 	});
 
 	widget({
@@ -134,16 +153,17 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		}
 	});
 
-	// Track camera move velocity
+	// Track orbit camera angles
+	const ORBIT_SCALE = Math.PI * 0.001;
+	let pitch = HALF_PI - 50 * ORBIT_SCALE;
+	let yaw = -HALF_PI + 50 * ORBIT_SCALE;
+	const zoom = 5;
 
-	const ORBIT_SCALE = Math.PI * 0.01;
-	let pitch = HALF_PI - 5 * ORBIT_SCALE;
-	let yaw = -HALF_PI + 5 * ORBIT_SCALE;
-
+	// Position camera focus
 	const MOVE_SCALE = 0.025;
 	let xPos = 0;
 	let yPos = 0;
-	let zPos = 5;
+	let zPos = 2;
 
 	// Establish render loop
 	// Simulation and frame rate must be less than or equal to device refresh rate
@@ -163,31 +183,36 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			// A "tick" has passed, update simulation
 			if (simDeltaTime >= SIM_DURATION) {
 				lastSimTime = timestamp - (simDeltaTime % SIM_DURATION);
+
+				// Record total mouse movement and reset
+				if (clickTracker.has(LEFT_CLICK)) {
+					yaw = wrapRadians(yaw, movementX * ORBIT_SCALE);
+					pitch = clampRadians(pitch, movementY * ORBIT_SCALE);
+				}
+				// Reset tracked mouse movement
+				movementX = 0;
+				movementY = 0;
+
 				// Handle input
 				if (keyTracker.has("w")) {
-					yPos += MOVE_SCALE;
-					pitch = clampRadians(pitch, -ORBIT_SCALE);
+					zPos += MOVE_SCALE;
 				}
 				if (keyTracker.has("s")) {
-					yPos -= MOVE_SCALE;
-					pitch = clampRadians(pitch, ORBIT_SCALE);
+					zPos -= MOVE_SCALE;
 				}
 				if (keyTracker.has("d")) {
 					xPos += MOVE_SCALE;
-					yaw = wrapRadians(yaw, ORBIT_SCALE);
 				}
 				if (keyTracker.has("a")) {
 					xPos -= MOVE_SCALE;
-					yaw = wrapRadians(yaw, -ORBIT_SCALE);
 				}
 				if (keyTracker.has("[")) {
-					zPos += MOVE_SCALE;
+					yPos += MOVE_SCALE;
 				}
 				if (keyTracker.has("]")) {
-					zPos -= MOVE_SCALE;
+					yPos -= MOVE_SCALE;
 				}
-				// wrapper.positionCamera(xPos, yPos, zPos);
-				wrapper.orbitCamera(zPos, pitch, yaw);
+				wrapper.orbitCamera([xPos, yPos, zPos], zoom, pitch, yaw);
 			}
 
 			const frameDeltaTime = timestamp - lastFrameTime;

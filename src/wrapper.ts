@@ -4,6 +4,7 @@ import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext,
 import type { Model } from "./models/model";
 import { Rectangle } from "./models/rectangle";
 import { Triangle } from "./models/trangle";
+import type { TVec3 } from "./utils";
 
 export class Wrapper {
 
@@ -205,8 +206,8 @@ export class Wrapper {
 		this.camera.writeBuffer();
 	}
 
-	public orbitCamera(distance: number, pitch: number, yaw: number) {
-		this.camera.updateViewOrbital([0, 0, 0], distance, pitch, yaw);
+	public orbitCamera(focus: TVec3, distance: number, pitch: number, yaw: number) {
+		this.camera.updateViewOrbital(focus, distance, pitch, yaw);
 		this.camera.writeBuffer();
 	}
 
