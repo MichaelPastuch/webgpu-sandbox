@@ -9,18 +9,24 @@ export class Camera {
 
 	private perspectiveMode = true;
 
+	/** Assume always normalised */
+	#up: TVec3 = [0, 1, 0];
+
 	/** x = right, y = up, z = forwards */
 	#position: TVec3 = [0, 0, 0];
+
 	#direction: TVec3 = [0, 0, 1];
 	public get direction(): TVec3 {
 		return this.#direction;
 	}
-	/** Assume always normalised */
-	private up: TVec3 = [0, 1, 0];
-
 	#right: TVec3 = [1, 0, 0];
 	public get right(): TVec3 {
 		return this.#right;
+	}
+	/** x/z components of direction only */
+	public get forward(): TVec3 {
+		// return normalize(cross(this.#right, this.up));
+		return normalize([this.#direction[0], 0, this.#direction[2]]);
 	}
 
 	private near: number = 1;
@@ -84,9 +90,9 @@ export class Camera {
 		this.#position = position;
 		// Vector from camera position to reference point
 		this.#direction = normalize(direction);
-		this.#right = normalize(cross(this.up, this.#direction));
+		this.#right = normalize(cross(this.#up, this.#direction));
 		if (up != null) {
-			this.up = normalize(up);
+			this.#up = normalize(up);
 		}
 	}
 

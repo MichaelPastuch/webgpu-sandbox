@@ -179,7 +179,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 
 	// Track orbit camera angles
 	// TODO Consider tracking pitch/yaw as integers, and convert to radians before render
-	const ORBIT_SCALE = Math.PI * 0.001;
+	const ORBIT_SCALE = Math.PI * 0.0025;
 	let pitch = HALF_PI - 25 * ORBIT_SCALE;
 	let yaw = -HALF_PI + 25 * ORBIT_SCALE;
 	const distance = 5;
@@ -219,23 +219,37 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 				movementY = 0;
 
 				// Handle input
+				let forward = 0;
+				let right = 0;
 				if (keyTracker.has("w")) {
-					zPos += MOVE_SCALE;
+					forward += MOVE_SCALE;
 				}
 				if (keyTracker.has("s")) {
-					zPos -= MOVE_SCALE;
+					forward -= MOVE_SCALE;
 				}
 				if (keyTracker.has("d")) {
-					xPos += MOVE_SCALE;
+					right += MOVE_SCALE;
 				}
 				if (keyTracker.has("a")) {
-					xPos -= MOVE_SCALE;
+					right -= MOVE_SCALE;
 				}
 				if (keyTracker.has(" ")) {
 					yPos += MOVE_SCALE;
 				}
 				if (keyTracker.has("Control")) {
 					yPos -= MOVE_SCALE;
+				}
+
+				// Move camera relative to the direction it is facing
+				if (forward != 0) {
+					const fwd = wrapper.camera.forward;
+					xPos += fwd[0] * forward;
+					zPos += fwd[2] * forward;
+				}
+				if (right != 0) {
+					const rgt = wrapper.camera.right;
+					xPos += rgt[0] * right;
+					zPos += rgt[2] * right;
 				}
 				wrapper.camera.updateViewOrbital([xPos, yPos, zPos], distance, pitch, yaw);
 			}
