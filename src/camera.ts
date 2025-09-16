@@ -85,6 +85,17 @@ export class Camera {
 		this.updateViewDirection(position, vector(position, focus), up);
 	}
 
+	public updateViewOrbital(focus: TVec3, distance: number, pitch: number, yaw: number) {
+		// Use angles to position camera on sphere about origin
+		const sinPitch = Math.sin(pitch);
+		const position: TVec3 = [
+			distance * sinPitch * Math.cos(yaw),
+			distance * Math.cos(pitch),
+			distance * sinPitch * Math.sin(yaw)
+		];
+		this.updateViewDirection(position, vector(position, focus));
+	}
+
 	private get viewMatrix(): TMatrix4 {
 		const pos = this.position;
 		// Assemble orthonormal vectors for camera space

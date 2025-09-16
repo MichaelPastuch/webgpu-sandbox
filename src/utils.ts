@@ -33,13 +33,25 @@ export const identity: TMatrix4 = [
 	0, 0, 0, 1
 ];
 
-/** Apply delta to a given angle and wrap in the range 0 - 2Pi */
+/** Apply delta to a given angle and wrap in the range 0 <= angle <= 2Pi */
 export function wrapRadians(angle: number, delta: number) {
 	const newRadians = angle + delta;
 	if (newRadians > TWO_PI) {
 		return newRadians - TWO_PI;
 	} else if (newRadians < 0) {
 		return TWO_PI + newRadians;
+	} else {
+		return newRadians;
+	}
+}
+
+/** Apply delta to a given angle and clamp in the range 0 < angle < Pi */
+export function clampRadians(angle: number, delta: number) {
+	const newRadians = angle + delta;
+	if (newRadians > Math.PI - Number.EPSILON) {
+		return Math.PI - Number.EPSILON;
+	} else if (newRadians < Number.EPSILON) {
+		return Number.EPSILON;
 	} else {
 		return newRadians;
 	}
