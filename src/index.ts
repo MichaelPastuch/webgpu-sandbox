@@ -81,23 +81,45 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		keyTracker.delete(event.key);
 	});
 
-	let movementX = 0;
-	let movementY = 0;
-	canvas.addEventListener("mousemove", function (event) {
-		movementX += event.movementX;
-		movementY += event.movementY;
-	});
-	const clickTracker = new Set<number>();
+	// Track mouse key usage
 	const LEFT_CLICK = 0;
 	// const RIGHT_CLICK = 2;
-	canvas.addEventListener("mousedown", function (event) {
-		clickTracker.add(event.button);
-	});
-	canvas.addEventListener("mouseup", function (event) {
-		clickTracker.delete(event.button);
-	});
-	canvas.addEventListener("mouseleave", function () {
-		clickTracker.clear();
+	const buttonTracker = new Set<number>();
+	function mouseDown(event: MouseEvent) {
+		buttonTracker.add(event.button);
+	}
+	function mouseUp(event: MouseEvent) {
+		buttonTracker.delete(event.button);
+	}
+
+	// Track mouse movement when locked
+	let movementX = 0;
+	let movementY = 0;
+	function trackMovement(event: MouseEvent) {
+		movementX += event.movementX;
+		movementY += event.movementY;
+	}
+	document.addEventListener("pointerlockchange", function () {
+		if (document.pointerLockElement === canvas) {
+			document.addEventListener("mousemove", trackMovement, false);
+			document.addEventListener("mousedown", mouseDown, false);
+			document.addEventListener("mouseup", mouseUp, false);
+		} else {
+			document.removeEventListener("mousemove", trackMovement, false);
+			document.removeEventListener("mousedown", mouseDown, false);
+			document.removeEventListener("mouseup", mouseUp, false);
+			// "Unset" all mouse buttons
+			buttonTracker.clear();
+		}
+	}, false);
+
+	// Get pointer lock for orbital camera
+	canvas.addEventListener("click", async function () {
+		if (document.pointerLockElement == null) {
+			await canvas.requestPointerLock({
+				unadjustedMovement: true,
+			});
+		}
 	});
 
 	widget({
@@ -154,7 +176,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	});
 
 	// Track orbit camera angles
-	const ORBIT_SCALE = Math.PI * 0.001;
+	const ORBIT_SCALE = Math.PI * 0.0005;
 	let pitch = HALF_PI - 50 * ORBIT_SCALE;
 	let yaw = -HALF_PI + 50 * ORBIT_SCALE;
 	const zoom = 5;
@@ -184,13 +206,13 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			if (simDeltaTime >= SIM_DURATION) {
 				lastSimTime = timestamp - (simDeltaTime % SIM_DURATION);
 
-				// Record total mouse movement and reset
-				if (clickTracker.has(LEFT_CLICK)) {
-					yaw = wrapRadians(yaw, movementX * ORBIT_SCALE);
-					pitch = clampRadians(pitch, movementY * ORBIT_SCALE);
+				if (buttonTracker.has(LEFT_CLICK)) {
+					console.debug("LEFT_CLICK");
 				}
-				// Reset tracked mouse movement
+				// Record total mouse movement and reset
+				yaw = wrapRadians(yaw, -movementX * ORBIT_SCALE);
 				movementX = 0;
+				pitch = clampRadians(pitch, movementY * ORBIT_SCALE);
 				movementY = 0;
 
 				// Handle input
