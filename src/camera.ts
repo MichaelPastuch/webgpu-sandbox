@@ -10,10 +10,18 @@ export class Camera {
 	private perspectiveMode = true;
 
 	/** x = right, y = up, z = forwards */
-	private position: TVec3 = [0, 0, 0];
-	private direction: TVec3 = [0, 0, 1];
+	#position: TVec3 = [0, 0, 0];
+	#direction: TVec3 = [0, 0, 1];
+	public get direction(): TVec3 {
+		return this.#direction;
+	}
 	/** Assume always normalised */
 	private up: TVec3 = [0, 1, 0];
+
+	#right: TVec3 = [1, 0, 0];
+	public get right(): TVec3 {
+		return this.#right;
+	}
 
 	private near: number = 1;
 	private far: number = 20;
@@ -73,9 +81,10 @@ export class Camera {
 	// "Classic" D3DXMatrixLookAtRH view transform
 	// https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixlookatrh
 	public updateViewDirection(position: TVec3, direction: TVec3, up?: TVec3) {
-		this.position = position;
+		this.#position = position;
 		// Vector from camera position to reference point
-		this.direction = normalize(direction);
+		this.#direction = normalize(direction);
+		this.#right = normalize(cross(this.up, this.#direction));
 		if (up != null) {
 			this.up = normalize(up);
 		}
@@ -98,10 +107,10 @@ export class Camera {
 	}
 
 	private get viewMatrix(): TMatrix4 {
-		const pos = this.position;
+		const pos = this.#position;
 		// Assemble orthonormal vectors for camera space
-		const fwd = this.direction;
-		const right = normalize(cross(this.up, fwd));
+		const fwd = this.#direction;
+		const right = this.#right;
 		const up = cross(fwd, right);
 		// Translate and rotate the world back to the camera position
 		return [
