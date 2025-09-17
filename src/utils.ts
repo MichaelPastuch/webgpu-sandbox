@@ -1,4 +1,4 @@
-import { TWO_PI } from "./constants";
+import { PI_EPSILON, TWO_PI } from "./constants";
 
 export type TVec3 = [number, number, number];
 
@@ -48,8 +48,8 @@ export function wrapRadians(angle: number, delta: number) {
 /** Apply delta to a given angle and clamp in the range 0 < angle < Pi */
 export function clampRadians(angle: number, delta: number) {
 	const newRadians = angle + delta;
-	if (newRadians > Math.PI - Number.EPSILON) {
-		return Math.PI - Number.EPSILON;
+	if (newRadians > PI_EPSILON) {
+		return PI_EPSILON;
 	} else if (newRadians < Number.EPSILON) {
 		return Number.EPSILON;
 	} else {
@@ -160,4 +160,28 @@ export function toMatrix([q0, q1, q2, q3]: TQuat): TMatrix3 {
 		2 * q1 * q2 + 2 * q0 * q3, 1 - q1s2 - q3s2, 2 * q2 * q3 - 2 * q0 * q1,
 		2 * q1 * q3 - 2 * q0 * q2, 2 * q2 * q3 + 2 * q0 * q1, 1 - q1s2 - q2s2
 	];
+}
+
+export class RollingAverage {
+
+	private valIdx: number = 0;
+	private readonly vals: number[];
+	private readonly scalar: number;
+
+	public get average(): number {
+		return this.scalar * this.vals
+			.reduce((acc, value) => acc + value, 0);
+	}
+
+	constructor(private readonly numSamples: number) {
+		this.scalar = 1 / numSamples;
+		this.vals = new Array(numSamples).map(() => 0);
+	}
+
+	update(newSample: number) {
+		// Wrap sample slot
+		this.valIdx = this.valIdx === this.numSamples ? 0 : this.valIdx + 1;
+		this.vals[this.valIdx] = newSample;
+	}
+
 }
