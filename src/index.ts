@@ -1,6 +1,7 @@
 import { DEG_TO_RAD, HALF_PI } from "./constants";
 import { type IGpu } from "./interface";
-import { clampRadians, wrapRadians } from "./utils";
+import { TimeManager } from "./time";
+import { clampRadians, RollingAverage, wrapRadians } from "./utils";
 import { Wrapper } from "./wrapper";
 
 const main = document.getElementById("main");
@@ -66,6 +67,23 @@ function widget({
 	main?.append(container);
 }
 
+function monitor<T>(label: string): (update: T) => void {
+	const container = document.createElement("div");
+	const lbl = document.createElement("pre");
+	lbl.innerText = label;
+	container.append(lbl);
+	const value = document.createElement("pre");
+	container.append(value);
+	main?.append(container);
+	let lastValue: T | null = null;
+	return function (newValue) {
+		if (newValue !== lastValue) {
+			lastValue = newValue;
+			value.innerText = String(newValue);
+		}
+	}
+}
+
 // TODO Support "halting" render & sim with "Escape" key
 async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	const wrapper = await Wrapper.create(canvas, gpu);
@@ -83,7 +101,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 
 	// Track mouse key usage
 	const LEFT_CLICK = 0;
-	// const RIGHT_CLICK = 2;
+	const RIGHT_CLICK = 2;
 	const buttonTracker = new Set<number>();
 	function mouseDown(event: MouseEvent) {
 		buttonTracker.add(event.button);
@@ -128,6 +146,11 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			// await canvas.requestFullscreen();
 		}
 	});
+
+	const deltaAvg = new RollingAverage(50);
+	const deltaTimeLog = monitor("Delta time");
+	const leftClickLog = monitor("Left click");
+	const rightClickLog = monitor("Right Click");
 
 	widget({
 		label: "Y Field of View",
@@ -184,89 +207,115 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 
 	// Track orbit camera angles
 	// TODO Consider tracking pitch/yaw as integers, and convert to radians before render
-	const ORBIT_SCALE = Math.PI * 0.0025;
-	let pitch = HALF_PI - 25 * ORBIT_SCALE;
-	let yaw = -HALF_PI + 25 * ORBIT_SCALE;
-	const distance = 5;
+	const ORBIT_VELOCITY = Math.PI * 0.1;
+
+	// Track camera velocity
+	let vForward = 0;
+	let vRight = 0;
+	let vUp = 0;
+	let vPitch = 0;
+	let vYaw = 0;
 
 	// Position camera focus
-	const MOVE_SCALE = 0.05;
+	const MOVE_VELOCITY = 2;
 	let xPos = 0;
 	let yPos = 0;
 	let zPos = 0;
+	let pitch = HALF_PI * 0.9;
+	let yaw = -HALF_PI * 0.9;
+	const distance = 5;
 
 	// Establish render loop
 	// Simulation and frame rate must be less than or equal to device refresh rate
-	const SIM_RATE = 60;
+	const SIM_RATE = 50;
 	const SIM_DURATION = 1000 / SIM_RATE;
 	let lastSimTime = 0;
 
-	const FRAME_RATE = 60;
+	const FRAME_RATE = 100;
 	const FRAME_DURATION = 1000 / FRAME_RATE;
 	let lastFrameTime = 0;
 
-	function frame(timestamp: number) {
+	const LOG_RATE = 1;
+	const LOG_DURATION = 1000 / LOG_RATE;
+	let lastLogTime = 0;
 
-		const simDeltaTime = timestamp - lastSimTime;
+	function frame(time: number) {
+
+		const simDeltaTime = time - lastSimTime;
 		// A "tick" has passed, update simulation
 		if (simDeltaTime >= SIM_DURATION) {
-			lastSimTime = timestamp - (simDeltaTime % SIM_DURATION);
+			lastSimTime = time - (simDeltaTime % SIM_DURATION);
+			// lastSimTime = time - SIM_DURATION;
 
-			if (buttonTracker.has(LEFT_CLICK)) {
-				console.debug("LEFT_CLICK");
-			}
+			leftClickLog(buttonTracker.has(LEFT_CLICK));
+			rightClickLog(buttonTracker.has(RIGHT_CLICK));
+
 			// Record total mouse movement and reset
-			yaw = wrapRadians(yaw, -movementX * ORBIT_SCALE);
+			vYaw = -movementX * ORBIT_VELOCITY;
 			movementX = 0;
-			pitch = clampRadians(pitch, movementY * ORBIT_SCALE);
+			vPitch = movementY * ORBIT_VELOCITY;
 			movementY = 0;
 
 			// Handle input
-			let forward = 0;
-			let right = 0;
+			vForward = 0;
+			vRight = 0;
+			vUp = 0;
 			if (keyTracker.has("w")) {
-				forward += MOVE_SCALE;
+				vForward += MOVE_VELOCITY;
 			}
 			if (keyTracker.has("s")) {
-				forward -= MOVE_SCALE;
+				vForward -= MOVE_VELOCITY;
 			}
 			if (keyTracker.has("d")) {
-				right += MOVE_SCALE;
+				vRight += MOVE_VELOCITY;
 			}
 			if (keyTracker.has("a")) {
-				right -= MOVE_SCALE;
+				vRight -= MOVE_VELOCITY;
 			}
 			if (keyTracker.has(" ")) {
-				yPos += MOVE_SCALE;
+				vUp += MOVE_VELOCITY;
 			}
 			if (keyTracker.has("Control")) {
-				yPos -= MOVE_SCALE;
+				vUp -= MOVE_VELOCITY;
 			}
-
-			// Move camera relative to the direction it is facing
-			if (forward != 0) {
-				const fwd = wrapper.camera.forward;
-				xPos += fwd[0] * forward;
-				zPos += fwd[2] * forward;
-			}
-			if (right != 0) {
-				const rgt = wrapper.camera.right;
-				xPos += rgt[0] * right;
-				zPos += rgt[2] * right;
-			}
-			wrapper.camera.updateViewOrbital([xPos, yPos, zPos], distance, pitch, yaw);
 		}
 
-		const frameDeltaTime = timestamp - lastFrameTime;
+		const frameTimestamp = performance.now();
+		const frameDeltaTime = frameTimestamp - lastFrameTime;
 		// A "frame" has passed, draw simulation state
 		if (frameDeltaTime >= FRAME_DURATION) {
-			lastFrameTime = timestamp - (frameDeltaTime % FRAME_DURATION);
+			lastFrameTime = frameTimestamp - (frameDeltaTime % FRAME_DURATION);
+
+			TimeManager.update = frameTimestamp;
+			deltaAvg.update(TimeManager.delta);
+			const scale = TimeManager.scale;
 
 			// Assume camera changes on every frame
+			// Move camera relative to the direction it is facing
+			const fwd = wrapper.camera.forward;
+			xPos += fwd[0] * vForward * scale;
+			zPos += fwd[2] * vForward * scale;
+			const rgt = wrapper.camera.right;
+			xPos += rgt[0] * vRight * scale;
+			zPos += rgt[2] * vRight * scale;
+			yPos += vUp * scale;
+			yaw = wrapRadians(yaw, vYaw * scale);
+			pitch = clampRadians(pitch, vPitch * scale);
+
+			// Use new positions for frame
+			wrapper.camera.updateViewOrbital([xPos, yPos, zPos], distance, pitch, yaw);
 			wrapper.camera.writeBuffer();
 
 			// Draw results
 			wrapper.render();
+		}
+
+		const logTImestamp = performance.now()
+		const logDeltaTime = logTImestamp - lastLogTime;
+		if (logDeltaTime >= LOG_DURATION) {
+			lastLogTime = logTImestamp - (logDeltaTime % LOG_DURATION);
+			// Update frame delta time average
+			deltaTimeLog(deltaAvg.average);
 		}
 
 		// Await next browser frame
