@@ -1,7 +1,7 @@
 import { DEG_TO_RAD, HALF_PI } from "./constants";
 import { type IGpu } from "./interface";
 import { TimeManager } from "./time";
-import { clampRadians, RollingAverage, wrapRadians } from "./utils";
+import { add, clampRadians, mul, normalize, RollingAverage, wrapRadians, type TVec3 } from "./utils";
 import { Wrapper } from "./wrapper";
 
 const main = document.getElementById("main");
@@ -90,6 +90,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 
 	// Track keys as they are pressed and released
 	// TODO is there a way to get the "raw" keyboard key pressed?
+	// TODO Dont miss keys or clicks between engine "ticks", clear sets after handling?
 	// Pressing "w", is different to pressing "w" with shift held ("W")
 	const keyTracker = new Set<string>();
 	function keyDown(event: KeyboardEvent) {
@@ -147,8 +148,8 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		}
 	});
 
-	const frameAvg = new RollingAverage(50);
-	const frameTimeLog = monitor("Frame time");
+	const engineAvg = new RollingAverage(50);
+	const engineTimeLog = monitor("Engine Interval");
 	const leftClickLog = monitor("Left click");
 	const rightClickLog = monitor("Right Click");
 
@@ -210,17 +211,14 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	const ORBIT_VELOCITY = Math.PI * 0.1;
 
 	// Track camera velocity
-	let vForward = 0;
-	let vRight = 0;
-	let vUp = 0;
 	let vPitch = 0;
 	let vYaw = 0;
 
 	// Position camera focus
-	const MOVE_VELOCITY = 2;
-	let xPos = 0;
-	let yPos = 0;
-	let zPos = 0;
+	const MOVE_VELOCITY = 3;
+	let position: TVec3 = [0, 0, 0];
+	let velocity: TVec3 = [0, 0, 0];
+
 	let pitch = HALF_PI * 0.9;
 	let yaw = -HALF_PI * 0.9;
 	const distance = 5;
@@ -232,7 +230,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	let lastSimTime = 0;
 
 	// Target frame rate
-	const FRAME_RATE = 100;
+	const FRAME_RATE = 75;
 	const FRAME_DURATION = 1000 / FRAME_RATE;
 	let lastFrameTime = 0;
 
@@ -246,10 +244,18 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		// A "tick" has passed, update simulation
 		if (simDeltaTime >= SIM_DURATION) {
 			lastSimTime = time - (simDeltaTime % SIM_DURATION);
-			// lastSimTime = time - SIM_DURATION;
+
+			TimeManager.engineUpdate = time;
+			engineAvg.update(TimeManager.engineDelta);
 
 			leftClickLog(buttonTracker.has(LEFT_CLICK));
 			rightClickLog(buttonTracker.has(RIGHT_CLICK));
+
+			// TODO Sync now? Or "roll" change during render only
+			// Apply velocity from previous "tick"
+			position = add(position, mul(velocity, TimeManager.engineScale));
+			yaw = wrapRadians(yaw, vYaw * TimeManager.engineScale);
+			pitch = clampRadians(pitch, vPitch * TimeManager.engineScale);
 
 			// Record total mouse movement and reset
 			vYaw = -movementX * ORBIT_VELOCITY;
@@ -258,26 +264,40 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			movementY = 0;
 
 			// Handle input
-			vForward = 0;
-			vRight = 0;
-			vUp = 0;
+			let tForward = 0;
+			let tRight = 0;
+			let tUp = 0;
 			if (keyTracker.has("w")) {
-				vForward += MOVE_VELOCITY;
+				tForward += 1;
 			}
 			if (keyTracker.has("s")) {
-				vForward -= MOVE_VELOCITY;
+				tForward -= 1;
 			}
 			if (keyTracker.has("d")) {
-				vRight += MOVE_VELOCITY;
+				tRight += 1;
 			}
 			if (keyTracker.has("a")) {
-				vRight -= MOVE_VELOCITY;
+				tRight -= 1;
 			}
 			if (keyTracker.has(" ")) {
-				vUp += MOVE_VELOCITY;
+				tUp += 1;
 			}
 			if (keyTracker.has("Control")) {
-				vUp -= MOVE_VELOCITY;
+				tUp -= 1;
+			}
+
+			// Assemble velocity from user input directions
+			if (tForward !== 0 || tRight !== 0 || tUp !== 0) {
+				const fwd = wrapper.camera.forward;
+				const rgt = wrapper.camera.right;
+				const direction = normalize([
+					fwd[0] * tForward + rgt[0] * tRight,
+					tUp,
+					fwd[2] * tForward + rgt[2] * tRight
+				]);
+				velocity = mul(direction, MOVE_VELOCITY);
+			} else {
+				velocity = [0, 0, 0];
 			}
 		}
 
@@ -287,23 +307,16 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		if (frameDeltaTime >= FRAME_DURATION) {
 			lastFrameTime = frameTimestamp - (frameDeltaTime % FRAME_DURATION);
 
-			TimeManager.update = frameTimestamp;
-			frameAvg.update(TimeManager.delta);
+			TimeManager.frameUpdate = frameTimestamp;
 
 			// Assume camera changes on every frame
-			// Move camera relative to the direction it is facing
-			const fwd = wrapper.camera.forward;
-			xPos += fwd[0] * vForward * TimeManager.scale;
-			zPos += fwd[2] * vForward * TimeManager.scale;
-			const rgt = wrapper.camera.right;
-			xPos += rgt[0] * vRight * TimeManager.scale;
-			zPos += rgt[2] * vRight * TimeManager.scale;
-			yPos += vUp * TimeManager.scale;
-			yaw = wrapRadians(yaw, vYaw * TimeManager.scale);
-			pitch = clampRadians(pitch, vPitch * TimeManager.scale);
+			// Extrapolate camera movement
+			const fFocus = add(position, mul(velocity, TimeManager.frameScale));
+			const fYaw = wrapRadians(yaw, vYaw * TimeManager.frameScale);
+			const fPitch = clampRadians(pitch, vPitch * TimeManager.frameScale);
 
 			// Use new positions for frame
-			wrapper.camera.updateViewOrbital([xPos, yPos, zPos], distance, pitch, yaw);
+			wrapper.camera.updateViewOrbital(fFocus, distance, fPitch, fYaw);
 			wrapper.camera.writeBuffer();
 
 			// Draw results
@@ -315,7 +328,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		if (logDeltaTime >= LOG_DURATION) {
 			lastLogTime = logTImestamp - (logDeltaTime % LOG_DURATION);
 			// Update frame delta time average
-			frameTimeLog(frameAvg.average);
+			engineTimeLog(engineAvg.average);
 		}
 
 		// Await next browser frame
@@ -323,7 +336,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	}
 
 	// Start sim/render loop
-	TimeManager.update = performance.now();
+	TimeManager.engineUpdate = performance.now();
 	requestAnimationFrame(frame);
 
 	// Debug 1 frame draw

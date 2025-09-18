@@ -2,14 +2,26 @@
 /** For engine use only */
 export abstract class TimeManager {
 
-	static time: number = 0;
-	static delta: number = 0;
-	static scale: number = 0;
+	static engineTime: number = 0;
+	static engineDelta: number = 0;
+	static engineScale: number = 0;
 
-	static set update(value: number) {
-		this.delta = value - this.time;
-		this.scale = this.delta * 0.001;
-		this.time = value;
+	static frameTime: number = 0;
+	static frameDelta: number = 0;
+	static frameScale: number = 0;
+
+	static set engineUpdate(value: number) {
+		this.engineDelta = value - this.engineTime;
+		this.engineScale = this.engineDelta * 0.001;
+		this.engineTime = value;
+		// Also update frame time
+		this.frameUpdate = value;
+	}
+
+	static set frameUpdate(value: number) {
+		this.frameDelta = value - this.frameTime;
+		this.frameScale = this.frameDelta * 0.001;
+		this.frameTime = value;
 	}
 
 }
