@@ -19,14 +19,19 @@ export class Wrapper {
 		}
 		const device = await adapter.requestDevice();
 		return new Wrapper(
-			device, context, gpu.getPreferredCanvasFormat(),
-			canvas.width, canvas.height
+			device, canvas, context, gpu.getPreferredCanvasFormat(),
 		);
 	}
 
 	private readonly module: IGpuShaderModule;
 
-	private readonly depthTexture: IGpuTexture;
+	private width: number = 0;
+	private height: number = 0;
+	private get aspect() {
+		return this.width / this.height;
+	}
+
+	private depthTexture!: IGpuTexture;
 
 	private readonly ambientBuffer: IGpuBuffer;
 	private ambientColor: TVec3 = [0, 0, 0];
@@ -41,12 +46,10 @@ export class Wrapper {
 
 	private constructor(
 		private readonly device: IGpuDevice,
+		private readonly canvas: HTMLCanvasElement,
 		private readonly context: IGpuCanvasContext,
-		private readonly format: TCanvasFormat,
-		width: number,
-		height: number
+		private readonly format: TCanvasFormat
 	) {
-
 		// Prepare context for WebGPU rendering
 		this.context.configure({
 			device: this.device,
@@ -54,11 +57,9 @@ export class Wrapper {
 			alphaMode: "premultiplied"
 		});
 
-		this.depthTexture = this.device.createTexture({
-			format: "depth24plus",
-			size: [width, height],
-			usage: DEPTH_TEXTURE
-		});
+		this.camera = new Camera(this.device);
+		// Initialise dimensions, depth buffer, and camera aspect ratio
+		this.resize(canvas.width, canvas.height);
 
 		// TODO Function to create shader module
 		// Prepare shaders
@@ -69,10 +70,6 @@ export class Wrapper {
 		this.module = this.device.createShaderModule({
 			code: shaderSrc.textContent
 		});
-
-		// TODO update projection when canvas is resized
-		this.camera = new Camera(this.device);
-		this.camera.updateProjection(1, 100, width / height, 45 * DEG_TO_RAD);
 
 		// Assemble ambient colour buffer
 		this.ambientBuffer = this.device.createBuffer({
@@ -187,6 +184,25 @@ export class Wrapper {
 				.translate(1, 0, 3)
 				.writeBuffer()
 		];
+	}
+
+	public resize(width: number, height: number) {
+		// Update size if different
+		if (this.width !== width || this.height !== height) {
+			this.width = width;
+			this.height = height;
+			this.canvas.width = this.width;
+			this.canvas.height = this.height;
+			// Rebuild depth texture if different
+			this.depthTexture?.destroy();
+			this.depthTexture = this.device.createTexture({
+				format: "depth24plus",
+				size: [this.width, this.height],
+				usage: DEPTH_TEXTURE
+			});
+			// Update projection matrix
+			this.camera.updateProjection(1, 100, this.aspect, 45 * DEG_TO_RAD);
+		}
 	}
 
 	public setAmbientColor(red: number, green: number, blue: number) {

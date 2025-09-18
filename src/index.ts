@@ -9,10 +9,11 @@ if (main == null) {
 	throw Error("Unable to mount application to #main");
 }
 
+const WIDTH = 1024;
+const HEIGHT = 768;
+
 document.addEventListener("DOMContentLoaded", () => {
 
-	const WIDTH = 1024;
-	const HEIGHT = 768;
 	const canvas = document.createElement("canvas");
 	canvas.width = WIDTH;
 	canvas.height = HEIGHT;
@@ -145,6 +146,21 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			});
 			// TODO fullscreen and resize canvas accordingly
 			// await canvas.requestFullscreen();
+		}
+	});
+
+	// Capture canvas resizing to fullscreen
+	const resizeObserver = new ResizeObserver(function ([canvas]) {
+		const boxSize = canvas?.devicePixelContentBoxSize[0];
+		if (boxSize != null) {
+			wrapper.resize(boxSize.inlineSize, boxSize.blockSize);
+		}
+	});
+	resizeObserver.observe(canvas);
+	// Capture user leaving fullscreen
+	document.addEventListener("fullscreenchange", function (event) {
+		if (!document.fullscreenElement) {
+			wrapper.resize(WIDTH, HEIGHT);
 		}
 	});
 
@@ -298,6 +314,12 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 				velocity = mul(direction, MOVE_VELOCITY);
 			} else {
 				velocity = [0, 0, 0];
+			}
+
+			// Enter fullscreen
+			if (keyTracker.has("Enter")) {
+				canvas.requestFullscreen();
+				keyTracker.delete("Enter");
 			}
 		}
 
