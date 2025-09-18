@@ -147,8 +147,8 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		}
 	});
 
-	const deltaAvg = new RollingAverage(50);
-	const deltaTimeLog = monitor("Delta time");
+	const frameAvg = new RollingAverage(50);
+	const frameTimeLog = monitor("Frame time");
 	const leftClickLog = monitor("Left click");
 	const rightClickLog = monitor("Right Click");
 
@@ -231,6 +231,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	const SIM_DURATION = 1000 / SIM_RATE;
 	let lastSimTime = 0;
 
+	// Target frame rate
 	const FRAME_RATE = 100;
 	const FRAME_DURATION = 1000 / FRAME_RATE;
 	let lastFrameTime = 0;
@@ -287,20 +288,19 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			lastFrameTime = frameTimestamp - (frameDeltaTime % FRAME_DURATION);
 
 			TimeManager.update = frameTimestamp;
-			deltaAvg.update(TimeManager.delta);
-			const scale = TimeManager.scale;
+			frameAvg.update(TimeManager.delta);
 
 			// Assume camera changes on every frame
 			// Move camera relative to the direction it is facing
 			const fwd = wrapper.camera.forward;
-			xPos += fwd[0] * vForward * scale;
-			zPos += fwd[2] * vForward * scale;
+			xPos += fwd[0] * vForward * TimeManager.scale;
+			zPos += fwd[2] * vForward * TimeManager.scale;
 			const rgt = wrapper.camera.right;
-			xPos += rgt[0] * vRight * scale;
-			zPos += rgt[2] * vRight * scale;
-			yPos += vUp * scale;
-			yaw = wrapRadians(yaw, vYaw * scale);
-			pitch = clampRadians(pitch, vPitch * scale);
+			xPos += rgt[0] * vRight * TimeManager.scale;
+			zPos += rgt[2] * vRight * TimeManager.scale;
+			yPos += vUp * TimeManager.scale;
+			yaw = wrapRadians(yaw, vYaw * TimeManager.scale);
+			pitch = clampRadians(pitch, vPitch * TimeManager.scale);
 
 			// Use new positions for frame
 			wrapper.camera.updateViewOrbital([xPos, yPos, zPos], distance, pitch, yaw);
@@ -315,7 +315,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		if (logDeltaTime >= LOG_DURATION) {
 			lastLogTime = logTImestamp - (logDeltaTime % LOG_DURATION);
 			// Update frame delta time average
-			deltaTimeLog(deltaAvg.average);
+			frameTimeLog(frameAvg.average);
 		}
 
 		// Await next browser frame
@@ -323,6 +323,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	}
 
 	// Start sim/render loop
+	TimeManager.update = performance.now();
 	requestAnimationFrame(frame);
 
 	// Debug 1 frame draw
