@@ -144,22 +144,15 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			await canvas.requestPointerLock({
 				unadjustedMovement: true,
 			});
-			// TODO fullscreen and resize canvas accordingly
-			// await canvas.requestFullscreen();
 		}
 	});
 
-	// Capture canvas resizing to fullscreen
-	const resizeObserver = new ResizeObserver(function ([canvas]) {
-		const boxSize = canvas?.devicePixelContentBoxSize[0];
-		if (boxSize != null) {
-			wrapper.resize(boxSize.inlineSize, boxSize.blockSize);
-		}
-	});
-	resizeObserver.observe(canvas);
-	// Capture user leaving fullscreen
-	document.addEventListener("fullscreenchange", function (event) {
-		if (!document.fullscreenElement) {
+	// Capture fullscreen toggling
+	document.addEventListener("fullscreenchange", function () {
+		if (document.fullscreenElement != null) {
+			const { width, height } = window.screen;
+			wrapper.resize(width, height);
+		} else {
 			wrapper.resize(WIDTH, HEIGHT);
 		}
 	});
@@ -246,7 +239,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	let lastSimTime = 0;
 
 	// Target frame rate
-	const FRAME_RATE = 75;
+	const FRAME_RATE = 100;
 	const FRAME_DURATION = 1000 / FRAME_RATE;
 	let lastFrameTime = 0;
 
