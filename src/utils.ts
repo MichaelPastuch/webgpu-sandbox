@@ -1,4 +1,3 @@
-import { PI_EPSILON, TWO_PI } from "./constants";
 
 export type TVec3 = [number, number, number];
 
@@ -33,27 +32,31 @@ export const identity: TMatrix4 = [
 	0, 0, 0, 1
 ];
 
-/** Apply delta to a given angle and wrap in the range 0 <= angle <= 2Pi */
-export function wrapRadians(angle: number, delta: number) {
-	const newRadians = angle + delta;
-	if (newRadians > TWO_PI) {
-		return newRadians - TWO_PI;
-	} else if (newRadians < 0) {
-		return TWO_PI + newRadians;
-	} else {
-		return newRadians;
+/** Return function that applies a delta to a given value, wrapping a given range */
+export function wrap(min: number, max: number) {
+	return function (value: number, delta: number) {
+		const newValue = value + delta;
+		if (newValue > max) {
+			return newValue - max;
+		} else if (newValue < min) {
+			return max + newValue;
+		} else {
+			return newValue;
+		}
 	}
 }
 
-/** Apply delta to a given angle and clamp in the range 0 < angle < Pi */
-export function clampRadians(angle: number, delta: number) {
-	const newRadians = angle + delta;
-	if (newRadians > PI_EPSILON) {
-		return PI_EPSILON;
-	} else if (newRadians < Number.EPSILON) {
-		return Number.EPSILON;
-	} else {
-		return newRadians;
+/** Return function that applies a delta to a given value, clamping to given range */
+export function clamp(min: number, max: number) {
+	return function (value: number, delta: number) {
+		const newValue = value + delta;
+		if (newValue > max) {
+			return max;
+		} else if (newValue < min) {
+			return min;
+		} else {
+			return newValue;
+		}
 	}
 }
 

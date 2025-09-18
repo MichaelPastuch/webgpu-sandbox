@@ -1,7 +1,7 @@
-import { DEG_TO_RAD, HALF_PI } from "./constants";
+import { DEG_TO_RAD, HALF_PI, TWO_PI } from "./constants";
 import { type IGpu } from "./interface";
 import { TimeManager } from "./time";
-import { add, clampRadians, mul, normalize, RollingAverage, wrapRadians, type TVec3 } from "./utils";
+import { add, clamp, mul, normalize, RollingAverage, wrap, type TVec3 } from "./utils";
 import { Wrapper } from "./wrapper";
 
 const main = document.getElementById("main");
@@ -217,20 +217,22 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 
 	// Track orbit camera angles
 	// TODO Consider tracking pitch/yaw as integers, and convert to radians before render
-	const ORBIT_VELOCITY = Math.PI * 0.1;
-
-	// Track camera velocity
-	let vPitch = 0;
-	let vYaw = 0;
 
 	// Position camera focus
-	const MOVE_VELOCITY = 3;
 	let position: TVec3 = [0, 0, 0];
-	let velocity: TVec3 = [0, 0, 0];
-
 	let pitch = HALF_PI * 0.9;
 	let yaw = -HALF_PI * 0.9;
 	const distance = 5;
+
+	// Track camera velocity
+	const MOVE_VELOCITY = 3;
+	const ORBIT_VELOCITY = Math.PI * 0.1;
+	let vPitch = 0;
+	let vYaw = 0;
+	let velocity: TVec3 = [0, 0, 0];
+
+	const wrapRadians = wrap(0, TWO_PI);
+	const clampRadians = clamp(Number.EPSILON, Math.PI - Number.EPSILON);
 
 	// Establish render loop
 	// Simulation and frame rate must be less than or equal to device refresh rate
