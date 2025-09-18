@@ -99,9 +99,18 @@ export function matrixMultiply4(lhs: TMatrix4, rhs: TMatrix4): TMatrix4 {
 	];
 }
 
+/** Create vector combining lhs and rhs */
+export function add(lhs: TVec3, rhs: TVec3): TVec3 {
+	return [lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]];
+}
+
 /** Create vector from lhs to rhs */
-export function vector(lhs: TVec3, rhs: TVec3): TVec3 {
+export function sub(lhs: TVec3, rhs: TVec3): TVec3 {
 	return [rhs[0] - lhs[0], rhs[1] - lhs[1], rhs[2] - lhs[2]]
+}
+
+export function mul(vec: TVec3, mul: number): TVec3 {
+	return [vec[0] * mul, vec[1] * mul, vec[2] * mul];
 }
 
 /** Vector length */

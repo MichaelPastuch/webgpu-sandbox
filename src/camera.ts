@@ -1,6 +1,6 @@
 import { SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
-import { cross, dot, matrixMultiply4, normalize, vector, type TMatrix4, type TVec3 } from "./utils";
+import { cross, dot, matrixMultiply4, normalize, sub, type TMatrix4, type TVec3 } from "./utils";
 
 // WebGPU -> x and y range from -1 to +1, z ranges from 0 to 1
 // Any values outside of this range are clipped
@@ -97,7 +97,7 @@ export class Camera {
 	}
 
 	public updateViewFocus(position: TVec3, focus: TVec3, up?: TVec3) {
-		this.updateViewDirection(position, vector(position, focus), up);
+		this.updateViewDirection(position, sub(position, focus), up);
 	}
 
 	public updateViewOrbital(focus: TVec3, distance: number, pitch: number, yaw: number) {
