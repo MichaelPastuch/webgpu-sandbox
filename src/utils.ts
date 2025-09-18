@@ -180,7 +180,10 @@ export class RollingAverage {
 
 	update(newSample: number) {
 		// Wrap sample slot
-		this.valIdx = this.valIdx === this.numSamples ? 0 : this.valIdx + 1;
+		this.valIdx++;
+		if (this.valIdx === this.numSamples) {
+			this.valIdx = 0;
+		}
 		this.vals[this.valIdx] = newSample;
 	}
 
