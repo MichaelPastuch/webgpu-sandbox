@@ -1,6 +1,7 @@
 import { Camera } from "./camera";
 import { DEG_TO_RAD, DEPTH_TEXTURE, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "./interface";
+import { Circle } from "./models/circle";
 import type { Model } from "./models/model";
 import { Rectangle } from "./models/rectangle";
 import { Triangle } from "./models/trangle";
@@ -163,6 +164,14 @@ export class Wrapper {
 				.translate(0, -1.5, 6)
 				.rotate(HALF_PI, 0)
 				.scale(2)
+				.writeBuffer(),
+			// Create circle (octagon)
+			new Circle(device, modelBindGroupLayout, {
+				radius: 3,
+				numPoints: 16,
+				colors: "01"
+			})
+				.translate(0, 2, 12)
 				.writeBuffer(),
 			// Create triangles
 			new Triangle(this.device, modelBindGroupLayout, {
