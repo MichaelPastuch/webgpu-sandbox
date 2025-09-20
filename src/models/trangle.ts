@@ -27,16 +27,16 @@ export class Triangle extends Model {
 		const cols = new Color(colors);
 		const x = 0.5 * width;
 		const y = 0.5 * height;
-		// Assemble triangle (xyzw, rgba)
+		// Assemble triangle (xyz, rgb)
 		const vertices = new Float32Array([
 			// Top
-			x * shiftTop, y, 0, 1,
+			x * shiftTop, y, 0,
 			...cols.next(),
 			// Bottom-left
-			-x, -y, 0, 1,
+			-x, -y, 0,
 			...cols.next(),
 			// Bottom-right
-			x, -y, 0, 1,
+			x, -y, 0,
 			...cols.next()
 		]);
 		this.vertexBuffer = this.device.createBuffer({

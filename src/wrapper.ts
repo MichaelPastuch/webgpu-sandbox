@@ -136,14 +136,14 @@ export class Wrapper {
 						// Position
 						shaderLocation: 0,
 						offset: 0,
-						format: "float32x4"
+						format: "float32x3"
 					}, {
 						// Colour
 						shaderLocation: 1,
-						offset: 16,
-						format: "float32x4"
+						offset: 12,
+						format: "float32x3"
 					}],
-					arrayStride: 32
+					arrayStride: 24
 				}]
 			},
 			fragment: {

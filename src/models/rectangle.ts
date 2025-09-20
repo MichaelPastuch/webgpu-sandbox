@@ -25,19 +25,19 @@ export class Rectangle extends Model {
 		const cols = new Color(colors);
 		const x = 0.5 * width;
 		const y = 0.5 * height;
-		// Assemble rectangle (xyzw, rgba)
+		// Assemble rectangle (xyz, rgb)
 		const vertices = new Float32Array([
 			// Top-left
-			-x, y, 0, 1,
+			-x, y, 0,
 			...cols.next(),
 			// Bottom-left
-			-x, -y, 0, 1,
+			-x, -y, 0,
 			...cols.next(),
 			// Bottom-right
-			x, -y, 0, 1,
+			x, -y, 0,
 			...cols.next(),
 			// Top-right
-			x, y, 0, 1,
+			x, y, 0,
 			...cols.next()
 		]);
 		this.vertexBuffer = this.device.createBuffer({

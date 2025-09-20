@@ -37,7 +37,7 @@ export class Circle extends Model {
 			// Produce x/y coordinates for each circle sample point, anti-clockwise
 			const angle = sample * anglePerSample;
 			circleData.push(
-				radius * Math.sin(angle), radius * Math.cos(angle), 0, 1,
+				radius * Math.sin(angle), radius * Math.cos(angle), 0,
 				...cols.next()
 			);
 		}
