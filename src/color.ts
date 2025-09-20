@@ -1,7 +1,9 @@
+import { overflow } from "./utils";
+
 type TColor = [number, number, number, number];
 
 /** Color helper for quick access to float4 sets of values */
-export abstract class Color {
+export class Color {
 
 	public static readonly red: TColor = [1, 0, 0, 1];
 	public static readonly green: TColor = [0, 1, 0, 1];
@@ -26,6 +28,20 @@ export abstract class Color {
 	/** Resolve single character color reference, 1 and 0 are special characters for white and black */
 	public static fromChar(character?: string) {
 		return (character ? this.colMap.get(character) : null) ?? this.black;
+	}
+
+	private colorIdx = 0;
+	private overflow: (value: number, delta: number) => number;
+
+	constructor(private readonly colors: string) {
+		this.overflow = overflow(0, colors.length - 1);
+	}
+
+	/** Get next color, wrapping back to the start */
+	public next(): TColor {
+		const idx = this.colorIdx;
+		this.colorIdx = this.overflow(this.colorIdx, 1);
+		return Color.fromChar(this.colors.at(idx));
 	}
 
 }

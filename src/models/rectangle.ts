@@ -22,22 +22,23 @@ export class Rectangle extends Model {
 		colors = "ygbr"
 	}: IRectangleConfig = {}) {
 		super(device, bindGroupLayout);
+		const cols = new Color(colors);
 		const x = 0.5 * width;
 		const y = 0.5 * height;
 		// Assemble rectangle (xyzw, rgba)
 		const vertices = new Float32Array([
 			// Top-left
 			-x, y, 0, 1,
-			...Color.fromChar(colors.at(0)),
+			...cols.next(),
 			// Bottom-left
 			-x, -y, 0, 1,
-			...Color.fromChar(colors.at(1)),
+			...cols.next(),
 			// Bottom-right
 			x, -y, 0, 1,
-			...Color.fromChar(colors.at(2)),
+			...cols.next(),
 			// Top-right
 			x, y, 0, 1,
-			...Color.fromChar(colors.at(3)),
+			...cols.next()
 		]);
 		this.vertexBuffer = this.device.createBuffer({
 			size: vertices.byteLength,

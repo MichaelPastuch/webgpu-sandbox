@@ -1,7 +1,7 @@
 import { Color } from "../color";
 import { INDEX_BUFFER, TWO_PI, VERTEX_BUFFER } from "../constants";
 import type { IGpuBindGroupLayout, IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder } from "../interface";
-import { wrap, overflow } from "../utils";
+import { wrap } from "../utils";
 import { Model } from "./model";
 
 interface ICircleConfig {
@@ -29,9 +29,7 @@ export class Circle extends Model {
 		if (numPoints < 3) {
 			throw Error("Circle must have at least 3 points");
 		}
-		// Return to first color if there are more points than colors
-		const overflowColor = overflow(0, colors.length - 1);
-		let colIdx = 0;
+		const cols = new Color(colors);
 		// Assemble circle, sampling anticlockwise
 		const anglePerSample = -TWO_PI / numPoints;
 		const circleData: number[] = [];
@@ -40,9 +38,8 @@ export class Circle extends Model {
 			const angle = sample * anglePerSample;
 			circleData.push(
 				radius * Math.sin(angle), radius * Math.cos(angle), 0, 1,
-				...Color.fromChar(colors.at(colIdx))
+				...cols.next()
 			);
-			colIdx = overflowColor(colIdx, 1);
 		}
 		const vertices = new Float32Array(circleData);
 		this.vertexBuffer = this.device.createBuffer({

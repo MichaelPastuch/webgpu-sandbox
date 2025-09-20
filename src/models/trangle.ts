@@ -24,19 +24,20 @@ export class Triangle extends Model {
 		colors = "rgb"
 	}: ITriangleConfig = {}) {
 		super(device, bindGroupLayout);
+		const cols = new Color(colors);
 		const x = 0.5 * width;
 		const y = 0.5 * height;
 		// Assemble triangle (xyzw, rgba)
 		const vertices = new Float32Array([
 			// Top
 			x * shiftTop, y, 0, 1,
-			...Color.fromChar(colors.at(0)),
+			...cols.next(),
 			// Bottom-left
 			-x, -y, 0, 1,
-			...Color.fromChar(colors.at(1)),
+			...cols.next(),
 			// Bottom-right
 			x, -y, 0, 1,
-			...Color.fromChar(colors.at(2))
+			...cols.next()
 		]);
 		this.vertexBuffer = this.device.createBuffer({
 			size: vertices.byteLength,
