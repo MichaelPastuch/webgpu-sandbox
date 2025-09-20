@@ -6,7 +6,8 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "monitor": "tsc -w",
-    "open": "open index.html"
+    "open": "open index.html",
+    "serve": "node server.js"
   },
   "repository": {
     "type": "git",
