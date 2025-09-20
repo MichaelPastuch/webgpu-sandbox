@@ -46,6 +46,20 @@ export function wrap(min: number, max: number) {
 	}
 }
 
+/** Return function that applies a delta to a given value, over/undeflowing back to min/max */
+export function overflow(min: number, max: number) {
+	return function (value: number, delta: number) {
+		const newValue = value + delta;
+		if (newValue > max) {
+			return min;
+		} else if (newValue < min) {
+			return max;
+		} else {
+			return newValue;
+		}
+	}
+}
+
 /** Return function that applies a delta to a given value, clamping to given range */
 export function clamp(min: number, max: number) {
 	return function (value: number, delta: number) {
