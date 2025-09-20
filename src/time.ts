@@ -26,6 +26,17 @@ export abstract class TimeManager {
 
 }
 
+interface ITime {
+	readonly engineTime: number;
+	readonly engineDelta: number;
+	readonly engineScale: number;
+	readonly frameTime: number;
+	readonly frameDelta: number;
+	readonly frameScale: number;
+}
+
+export const Time = TimeManager as ITime;
+
 // TODO Read only version for use by any entities
 
 /** Helper class for tracking time passed between engine ticks and frame creation */

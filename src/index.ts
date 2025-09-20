@@ -1,6 +1,6 @@
 import { DEG_TO_RAD, HALF_PI, TWO_PI } from "./constants";
 import { type IGpu } from "./interface";
-import { TimeManager } from "./time";
+import { Time, TimeManager } from "./time";
 import { add, clamp, mul, normalize, RollingAverage, wrap, type TVec3 } from "./utils";
 import { Wrapper } from "./wrapper";
 
@@ -264,9 +264,9 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 
 			// TODO Sync now? Or "roll" change during render only
 			// Apply velocity from previous "tick"
-			position = add(position, mul(velocity, TimeManager.engineScale));
-			yaw = wrapRadians(yaw, vYaw * TimeManager.engineScale);
-			pitch = clampRadians(pitch, vPitch * TimeManager.engineScale);
+			position = add(position, mul(velocity, Time.engineScale));
+			yaw = wrapRadians(yaw, vYaw * Time.engineScale);
+			pitch = clampRadians(pitch, vPitch * Time.engineScale);
 
 			// Record total mouse movement and reset
 			vYaw = -movementX * ORBIT_VELOCITY;
@@ -328,9 +328,9 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 
 			// Assume camera changes on every frame
 			// Extrapolate camera movement
-			const fFocus = add(position, mul(velocity, TimeManager.frameScale));
-			const fYaw = wrapRadians(yaw, vYaw * TimeManager.frameScale);
-			const fPitch = clampRadians(pitch, vPitch * TimeManager.frameScale);
+			const fFocus = add(position, mul(velocity, Time.frameScale));
+			const fYaw = wrapRadians(yaw, vYaw * Time.frameScale);
+			const fPitch = clampRadians(pitch, vPitch * Time.frameScale);
 
 			// Use new positions for frame
 			wrapper.camera.updateViewOrbital(fFocus, distance, fPitch, fYaw);
