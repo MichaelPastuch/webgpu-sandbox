@@ -1,5 +1,5 @@
 import { Camera } from "./camera";
-import { DEG_TO_RAD, DEPTH_TEXTURE, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
+import { DEG_TO_RAD, DEPTH_TEXTURE, FRAGMENT_STAGE, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "./interface";
 import { Circle } from "./models/circle";
 import type { Model } from "./models/model";
@@ -84,7 +84,7 @@ export class Wrapper {
 		const globalBindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
 				binding: 0,
-				visibility: VERTEX_STAGE,
+				visibility: FRAGMENT_STAGE,
 				buffer: { type: "uniform" }
 			}]
 		});
@@ -138,12 +138,17 @@ export class Wrapper {
 						offset: 0,
 						format: "float32x3"
 					}, {
-						// Colour
+						// Normal
 						shaderLocation: 1,
 						offset: 12,
 						format: "float32x3"
+					}, {
+						// Colour
+						shaderLocation: 2,
+						offset: 24,
+						format: "float32x3"
 					}],
-					arrayStride: 24
+					arrayStride: 36
 				}]
 			},
 			fragment: {
@@ -171,7 +176,8 @@ export class Wrapper {
 				numPoints: 16,
 				colors: "01"
 			})
-				.translate(0, 2, 12)
+				.translate(-6, 2, 12)
+				.rotate(0, -Math.PI * 0.25)
 				.writeBuffer(),
 			// Create triangles
 			new Triangle(this.device, modelBindGroupLayout, {
