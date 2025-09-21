@@ -1,4 +1,4 @@
-import { SHADER_BUFFER, VERTEX_STAGE } from "./constants";
+import { FRAGMENT_STAGE, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
 import { cross, dot, matrixMultiply4, normalize, sub, type TMatrix4, type TVec3 } from "./utils";
 
@@ -37,6 +37,8 @@ export class Camera {
 	public readonly viewBuffer: IGpuBuffer;
 	public readonly projBuffer: IGpuBuffer;
 	public readonly viewProjBuffer: IGpuBuffer;
+	private readonly cameraBuffer: IGpuBuffer;
+
 	public readonly bindGroupLayout: IGpuBindGroupLayout;
 	public readonly bindGroup: IGpuBindGroup;
 
@@ -53,6 +55,10 @@ export class Camera {
 			size: 4 * 16,
 			usage: SHADER_BUFFER
 		});
+		this.cameraBuffer = this.device.createBuffer({
+			size: 6 * 16,
+			usage: SHADER_BUFFER
+		});
 		// Bind camera matrices data for vertex/fragment shader usage
 		this.bindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
@@ -67,6 +73,10 @@ export class Camera {
 				binding: 2,
 				visibility: VERTEX_STAGE,
 				buffer: { type: "uniform" }
+			}, {
+				binding: 3,
+				visibility: FRAGMENT_STAGE,
+				buffer: { type: "uniform" }
 			}]
 		});
 		this.bindGroup = this.device.createBindGroup({
@@ -80,6 +90,9 @@ export class Camera {
 			}, {
 				binding: 2,
 				resource: { buffer: this.viewProjBuffer }
+			}, {
+				binding: 3,
+				resource: { buffer: this.cameraBuffer }
 			}]
 		});
 	}
@@ -192,6 +205,14 @@ export class Camera {
 		this.device.queue.writeBuffer(
 			this.viewProjBuffer, 0,
 			viewProjData, 0, viewProjData.length
+		);
+		const cameraData = new Float32Array([
+			...this.#position,
+			...this.#direction
+		]);
+		this.device.queue.writeBuffer(
+			this.cameraBuffer, 0,
+			cameraData, 0, cameraData.length
 		);
 	}
 

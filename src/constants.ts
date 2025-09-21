@@ -37,3 +37,4 @@ export const SHADER_BUFFER = GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM;
 
 /** Bind group visibility in vertex shader stage */
 export const VERTEX_STAGE = GPUShaderStage.VERTEX;
+export const FRAGMENT_STAGE = GPUShaderStage.FRAGMENT;
