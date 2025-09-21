@@ -38,6 +38,7 @@ export class Circle extends Model {
 			const angle = sample * anglePerSample;
 			circleData.push(
 				radius * Math.sin(angle), radius * Math.cos(angle), 0,
+				0, 0, -1,
 				...cols.next()
 			);
 		}
@@ -52,14 +53,13 @@ export class Circle extends Model {
 		);
 
 		const numTris = numPoints - 2;
-		// First triangle is "free" and requires special handling
-		const circleIndices: number[] = [0, 1, 2];
-		const wrapIndex = wrap(0, numPoints);
 		// Track indices for assembling alternate triangles
-		let startIdx = 2;
+		let startIdx = 1;
 		let endIdx = 0;
+		const wrapIndex = wrap(0, numPoints);
+		const circleIndices: number[] = [];
 		// Assemble triangle "strip" from remaining points
-		for (let tri = 1; tri < numTris; tri++) {
+		for (let tri = 0; tri < numTris; tri++) {
 			if ((tri & 1) === 0) {
 				const forward = startIdx + 1;
 				circleIndices.push(startIdx, forward, endIdx);

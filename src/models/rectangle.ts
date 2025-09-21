@@ -29,15 +29,19 @@ export class Rectangle extends Model {
 		const vertices = new Float32Array([
 			// Top-left
 			-x, y, 0,
+			0, 0, -1,
 			...cols.next(),
 			// Bottom-left
 			-x, -y, 0,
+			0, 0, -1,
 			...cols.next(),
 			// Bottom-right
 			x, -y, 0,
+			0, 0, -1,
 			...cols.next(),
 			// Top-right
 			x, y, 0,
+			0, 0, -1,
 			...cols.next()
 		]);
 		this.vertexBuffer = this.device.createBuffer({
