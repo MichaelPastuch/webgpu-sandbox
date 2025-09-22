@@ -52,11 +52,14 @@
 			);
 		}
 
-		const lightPos = vec3f(0, 4, 0);
-		const lightCol = vec3f(0.5, 0.5, 0.4);
+		const lightPos = vec3f(-1, 1, 2);
+		const lightCol = vec3f(0.9, 0.9, 0.8);
+		// const lightAtten = vec3f(1, 0.22, 0.20);
+		const lightAtten = vec3f(1, 0.14, 0.07);
+
 		const modelDiffuse = 1;
-		const modelSpecular = 0.5;
-		const modelShininess = 8;
+		const modelSpecular = 1;
+		const modelShininess = 1;
 
 		@fragment
 		fn fragmentShader(
@@ -65,28 +68,29 @@
 			@location(1) normal: vec4f,
 			@location(2) color: vec3f
 		) -> @location(0) vec4f {
-			// return vec4f(ambient * color, 1);
-
-			let modelCol = color * ambient;
-
-			// https://learnopengl.com/Advanced-Lighting/Advanced-Lighting
-
 			let normalDir = normalize(normal.xyz);
-			let lightDir = normalize(lightPos - position.xyz);
+			let lightVec = lightPos - position.xyz;
+			let lightDir = normalize(lightVec);
 			let viewDir = normalize(camera.position - position.xyz);
 			let midDir = normalize(lightDir + viewDir);
 
+			// Distance attenuation
+			let distance = length(lightVec);
+			let attenuation = 1.0 / (
+				lightAtten.x +
+				lightAtten.y * distance +
+				lightAtten.z * (distance * distance)
+			);
+
 			// Diffuse - light/normal
 			let diffuse = max(dot(lightDir, normalDir), 0.0);
-			let diffuseCol = modelDiffuse * diffuse * modelCol;
-
-			// return vec4f(diffuseCol, 1);
+			let diffuseCol = modelDiffuse * diffuse * lightCol;
 
 			// Specular - Blinn
-			let spec = modelSpecular * pow(max(dot(normalDir, midDir), 0.0), modelShininess);
-			let specularCol = lightCol * spec;
+			let specular = pow(max(dot(normalDir, midDir), 0.0), modelShininess);
+			let specularCol = modelSpecular * specular * lightCol;
 
-			return vec4f(diffuseCol + specularCol, 1);
+			return vec4f((ambient + attenuation * (diffuseCol + specularCol)) * color, 1);
 		}
 	</script>
 
