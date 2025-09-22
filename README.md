@@ -16,6 +16,8 @@ Brushing up on Computer graphics and concepts like clipping space and the view/p
 
 [Introduction to Computer Graphics](https://math.hws.edu/graphicsbook/c9/index.html)
 
+[Learn OpenGL](https://learnopengl.com/)
+
 Best practices when rendering many objects:
 
 [WebGPU Render Bundle](https://toji.dev/webgpu-best-practices/render-bundles.html)
