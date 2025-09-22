@@ -186,6 +186,7 @@ export class Wrapper {
 				colors: "cmy"
 			})
 				.translate(-1, 0, 9)
+				.rotate(0, -Math.PI * 0.25)
 				.writeBuffer(),
 			new Triangle(this.device, modelBindGroupLayout)
 				.translate(0, 0, 6)
@@ -197,6 +198,7 @@ export class Wrapper {
 				colors: "100"
 			})
 				.translate(1, 0, 3)
+				.rotate(0, Math.PI * 0.125)
 				.writeBuffer()
 		];
 	}

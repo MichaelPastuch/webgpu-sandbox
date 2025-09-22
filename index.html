@@ -9,22 +9,32 @@
 	<main id="main"></main>
 
 	<script id="shaders" type="text/wgsl">
+		@group(0) @binding(0) var<uniform> ambient: vec3f;
+
+		struct View {
+			view: mat4x4f,
+			proj: mat4x4f,
+			viewProj: mat4x4f
+		}
+		@group(1) @binding(0) var<uniform> view: View;
+
 		struct Camera {
 			position: vec3f,
 			direction: vec3f
 		};
+		@group(1) @binding(1) var<uniform> camera: Camera;
 
-		@group(0) @binding(0) var<uniform> ambient: vec3f;
-		@group(1) @binding(0) var<uniform> view: mat4x4f;
-		@group(1) @binding(1) var<uniform> proj: mat4x4f;
-		@group(1) @binding(2) var<uniform> viewProj: mat4x4f;
-		@group(1) @binding(3) var<uniform> camera: Camera;
-		@group(2) @binding(0) var<uniform> model: mat4x4f;
+		struct Model {
+			transform: mat4x4f,
+			normal: mat3x3f
+		}
+		@group(2) @binding(0) var<uniform> model: Model;
 
 		struct VertexOut {
-			@builtin(position) position: vec4f,
-			@location(0) normal: vec4f,
-			@location(1) color: vec3f
+			@builtin(position) fragment: vec4f,
+			@location(0) position: vec4f,
+			@location(1) normal: vec4f,
+			@location(2) color: vec3f
 		}
 
 		@vertex
@@ -33,43 +43,50 @@
 			@location(1) normal: vec3f,
 			@location(2) color: vec3f
 		) -> VertexOut {
+			let modelPosition = vec4f(position, 1) * model.transform;
 			return VertexOut(
-				vec4f(position, 1) * model * viewProj,
-				// TODO Transform matrix for surface normals
-				// vec4f(normal, 1) * model * view,
-				vec4f(normal, 1),
+				modelPosition * view.viewProj,
+				modelPosition,
+				vec4f(normal * model.normal, 1),
 				color
 			);
 		}
 
-		const lightPos = vec3f(-6, 6, 0);
-		const diffuse = 1;
-		const specular = 1;
-		const shininess = 1;
+		const lightPos = vec3f(0, 4, 0);
+		const lightCol = vec3f(0.5, 0.5, 0.4);
+		const modelDiffuse = 1;
+		const modelSpecular = 0.5;
+		const modelShininess = 8;
 
 		@fragment
 		fn fragmentShader(
-			@builtin(position) position: vec4f,
-			@location(0) normal: vec4f,
-			@location(1) color: vec3f
+			@builtin(position) fragment: vec4f,
+			@location(0) position: vec4f,
+			@location(1) normal: vec4f,
+			@location(2) color: vec3f
 		) -> @location(0) vec4f {
-			var lightDir = normalize(position.xyz - lightPos);
-			var viewDir = normalize(position.xyz - camera.position);
+			// return vec4f(ambient * color, 1);
 
-			// Angle between surface normal and light direction
-			var normalDir = normalize(normal.xyz);
-			var lightNormalAngle = max(dot(lightDir, normalDir), 0);
+			let modelCol = color * ambient;
 
-			// Reflection
-			var reflectionDir = reflect(lightDir, normalDir);
-			var reflectionViewAngle = max(dot(reflectionDir, viewDir), 0);
+			// https://learnopengl.com/Advanced-Lighting/Advanced-Lighting
 
-			// Phong
-			var phong = diffuse * lightNormalAngle * ambient * color
-				+ specular * pow(reflectionViewAngle, shininess) * ambient * color;
+			let normalDir = normalize(normal.xyz);
+			let lightDir = normalize(lightPos - position.xyz);
+			let viewDir = normalize(camera.position - position.xyz);
+			let midDir = normalize(lightDir + viewDir);
 
-			return vec4f(phong, 1);
-			// return vec4f(color, 1);
+			// Diffuse - light/normal
+			let diffuse = max(dot(lightDir, normalDir), 0.0);
+			let diffuseCol = modelDiffuse * diffuse * modelCol;
+
+			// return vec4f(diffuseCol, 1);
+
+			// Specular - Blinn
+			let spec = modelSpecular * pow(max(dot(normalDir, midDir), 0.0), modelShininess);
+			let specularCol = lightCol * spec;
+
+			return vec4f(diffuseCol + specularCol, 1);
 		}
 	</script>
 
