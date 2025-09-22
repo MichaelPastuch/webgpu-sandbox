@@ -1,6 +1,7 @@
 import { Camera } from "./camera";
 import { DEG_TO_RAD, DEPTH_TEXTURE, FRAGMENT_STAGE, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "./interface";
+import { Light } from "./lights/light";
 import { Circle } from "./models/circle";
 import type { Model } from "./models/model";
 import { Rectangle } from "./models/rectangle";
@@ -42,6 +43,8 @@ export class Wrapper {
 	private readonly globalBindGroup: IGpuBindGroup;
 
 	private readonly models: Model[];
+
+	public readonly light: Light;
 
 	private readonly renderPipeline: IGpuRenderPipeline;
 
@@ -104,12 +107,23 @@ export class Wrapper {
 			}]
 		});
 
+		// Bind light data
+		const lightBindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: FRAGMENT_STAGE,
+				buffer: { type: "uniform" }
+			}]
+		});
+		this.light = new Light(this.device, lightBindGroupLayout);
+
 		// Create pipeline layout
 		const pipelineLayout = this.device.createPipelineLayout({
 			bindGroupLayouts: [
 				globalBindGroupLayout,
 				this.camera.bindGroupLayout,
-				modelBindGroupLayout
+				modelBindGroupLayout,
+				lightBindGroupLayout
 			]
 		});
 
@@ -257,6 +271,10 @@ export class Wrapper {
 		passEncoder.setPipeline(this.renderPipeline);
 		passEncoder.setBindGroup(0, this.globalBindGroup);
 		passEncoder.setBindGroup(1, this.camera.bindGroup);
+
+		// Bind light
+		// TODO Support multiple lights
+		passEncoder.setBindGroup(3, this.light.bindGroup);
 
 		// Draw models
 		this.models.forEach((model) => {

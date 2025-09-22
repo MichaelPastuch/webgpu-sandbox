@@ -232,6 +232,26 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	let vYaw = 0;
 	let velocity: TVec3 = [0, 0, 0];
 
+	// Animate light
+	wrapper.light
+		.position(-1, 1, 2)
+		.color(0.9, 0.9, 0.8)
+		.writeBuffer();
+
+	// Have light orbit around scene
+	const lightOriginX = 0;
+	const lightOriginY = 1;
+	const lightOriginZ = 3;
+	let lightVelocity = 2
+	let lightAngle = 0;
+	const lightDistance = 2;
+
+	widget({
+		label: "Light velocity",
+		initialValue: 2, min: 0, max: 10,
+		onChange: (newVelocity) => lightVelocity = newVelocity
+	});
+
 	const wrapRadians = wrap(0, TWO_PI);
 	const clampRadians = clamp(Number.EPSILON, Math.PI - Number.EPSILON);
 
@@ -312,6 +332,9 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 				velocity = [0, 0, 0];
 			}
 
+			// Advance physics
+			lightAngle = wrapRadians(lightAngle, lightVelocity * Time.engineScale);
+
 			// Enter fullscreen
 			if (keyTracker.has("Enter")) {
 				canvas.requestFullscreen();
@@ -336,6 +359,13 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			// Use new positions for frame
 			wrapper.camera.updateViewOrbital(fFocus, distance, fPitch, fYaw);
 			wrapper.camera.writeBuffer();
+
+			// Orbit light
+			const fLightAngle = wrapRadians(lightAngle, lightVelocity * Time.frameScale);
+			const fLightX = lightOriginX + lightDistance * Math.cos(fLightAngle);
+			const fLightZ = lightOriginZ + lightDistance * Math.sin(fLightAngle);
+			wrapper.light.position(fLightX, lightOriginY, fLightZ)
+				.writeBuffer();
 
 			// Draw results
 			wrapper.render();

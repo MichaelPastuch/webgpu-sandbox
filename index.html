@@ -30,6 +30,13 @@
 		}
 		@group(2) @binding(0) var<uniform> model: Model;
 
+		struct Light {
+			position: vec3f,
+			color: vec3f,
+			attenuation: vec3f
+		}
+		@group(3) @binding(0) var<uniform> light: Light;
+
 		struct VertexOut {
 			@builtin(position) fragment: vec4f,
 			@location(0) position: vec4f,
@@ -52,11 +59,6 @@
 			);
 		}
 
-		const lightPos = vec3f(-1, 1, 2);
-		const lightCol = vec3f(0.9, 0.9, 0.8);
-		// const lightAtten = vec3f(1, 0.22, 0.20);
-		const lightAtten = vec3f(1, 0.14, 0.07);
-
 		const modelDiffuse = 1;
 		const modelSpecular = 1;
 		const modelShininess = 1;
@@ -69,7 +71,7 @@
 			@location(2) color: vec3f
 		) -> @location(0) vec4f {
 			let normalDir = normalize(normal.xyz);
-			let lightVec = lightPos - position.xyz;
+			let lightVec = light.position - position.xyz;
 			let lightDir = normalize(lightVec);
 			let viewDir = normalize(camera.position - position.xyz);
 			let midDir = normalize(lightDir + viewDir);
@@ -77,18 +79,18 @@
 			// Distance attenuation
 			let distance = length(lightVec);
 			let attenuation = 1.0 / (
-				lightAtten.x +
-				lightAtten.y * distance +
-				lightAtten.z * (distance * distance)
+				light.attenuation.x +
+				light.attenuation.y * distance +
+				light.attenuation.z * (distance * distance)
 			);
 
 			// Diffuse - light/normal
 			let diffuse = max(dot(lightDir, normalDir), 0.0);
-			let diffuseCol = modelDiffuse * diffuse * lightCol;
+			let diffuseCol = modelDiffuse * diffuse * light.color;
 
 			// Specular - Blinn
 			let specular = pow(max(dot(normalDir, midDir), 0.0), modelShininess);
-			let specularCol = modelSpecular * specular * lightCol;
+			let specularCol = modelSpecular * specular * light.color;
 
 			return vec4f((ambient + attenuation * (diffuseCol + specularCol)) * color, 1);
 		}
