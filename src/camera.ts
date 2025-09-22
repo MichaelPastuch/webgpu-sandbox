@@ -34,9 +34,9 @@ export class Camera {
 	private aspect: number = 1;
 	private perspective: number = 0.4;
 
+	// View matrices
 	public readonly viewBuffer: IGpuBuffer;
-	public readonly projBuffer: IGpuBuffer;
-	public readonly viewProjBuffer: IGpuBuffer;
+	// Camera properties
 	private readonly cameraBuffer: IGpuBuffer;
 
 	public readonly bindGroupLayout: IGpuBindGroupLayout;
@@ -44,15 +44,7 @@ export class Camera {
 
 	constructor(private readonly device: IGpuDevice) {
 		this.viewBuffer = this.device.createBuffer({
-			size: 4 * 16,
-			usage: SHADER_BUFFER
-		});
-		this.projBuffer = this.device.createBuffer({
-			size: 4 * 16,
-			usage: SHADER_BUFFER
-		});
-		this.viewProjBuffer = this.device.createBuffer({
-			size: 4 * 16,
+			size: 4 * 48,
 			usage: SHADER_BUFFER
 		});
 		this.cameraBuffer = this.device.createBuffer({
@@ -67,14 +59,6 @@ export class Camera {
 				buffer: { type: "uniform" }
 			}, {
 				binding: 1,
-				visibility: VERTEX_STAGE,
-				buffer: { type: "uniform" }
-			}, {
-				binding: 2,
-				visibility: VERTEX_STAGE,
-				buffer: { type: "uniform" }
-			}, {
-				binding: 3,
 				visibility: FRAGMENT_STAGE,
 				buffer: { type: "uniform" }
 			}]
@@ -86,12 +70,6 @@ export class Camera {
 				resource: { buffer: this.viewBuffer }
 			}, {
 				binding: 1,
-				resource: { buffer: this.projBuffer }
-			}, {
-				binding: 2,
-				resource: { buffer: this.viewProjBuffer }
-			}, {
-				binding: 3,
 				resource: { buffer: this.cameraBuffer }
 			}]
 		});
@@ -185,27 +163,21 @@ export class Camera {
 	}
 
 	public writeBuffer() {
+		// Write view matrices for vertex shaders
 		const viewMatrix = this.viewMatrix;
-		const viewData = new Float32Array(viewMatrix);
+		const projMatrix = this.perspectiveMode
+			? this.perspProjectionMatrix
+			: this.orthoProjectionMatrix;
+		const viewData = new Float32Array([
+			...viewMatrix,
+			...projMatrix,
+			...matrixMultiply4(viewMatrix, projMatrix)
+		]);
 		this.device.queue.writeBuffer(
 			this.viewBuffer, 0,
 			viewData, 0, viewData.length
 		);
-		const projMatrix = this.perspectiveMode
-			? this.perspProjectionMatrix
-			: this.orthoProjectionMatrix;
-		const projData = new Float32Array(projMatrix);
-		this.device.queue.writeBuffer(
-			this.projBuffer, 0,
-			projData, 0, projData.length
-		);
-		const viewProjData = new Float32Array(
-			matrixMultiply4(viewMatrix, projMatrix)
-		);
-		this.device.queue.writeBuffer(
-			this.viewProjBuffer, 0,
-			viewProjData, 0, viewProjData.length
-		);
+		// Write camera data for fragment shaders
 		const cameraData = new Float32Array([
 			...this.#position,
 			...this.#direction
