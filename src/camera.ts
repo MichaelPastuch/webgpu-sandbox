@@ -44,11 +44,11 @@ export class Camera {
 
 	constructor(private readonly device: IGpuDevice) {
 		this.viewBuffer = this.device.createBuffer({
-			size: 4 * 48,
+			size: 4 * (3 * 16),
 			usage: SHADER_BUFFER
 		});
 		this.cameraBuffer = this.device.createBuffer({
-			size: 6 * 16,
+			size: 4 * (2 * 4),
 			usage: SHADER_BUFFER
 		});
 		// Bind camera matrices data for vertex/fragment shader usage
@@ -179,8 +179,8 @@ export class Camera {
 		);
 		// Write camera data for fragment shaders
 		const cameraData = new Float32Array([
-			...this.#position,
-			...this.#direction
+			...this.#position, 0,
+			...this.#direction, 0
 		]);
 		this.device.queue.writeBuffer(
 			this.cameraBuffer, 0,
