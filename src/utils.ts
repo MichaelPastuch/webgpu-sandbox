@@ -174,6 +174,11 @@ export function fromRotation(pitch: number, yaw: number, roll: number = 0): TQua
 	];
 }
 
+/** Invert quaterion */
+export function inverse([q0, q1, q2, q3]: TQuat): TQuat {
+	return [q0, -q1, -q2, -q3];
+}
+
 /** Create 3x3 matrix rotation subset form quaternion */
 export function toMatrix([q0, q1, q2, q3]: TQuat): TMatrix3 {
 	const q1s2 = q1 * q1 * 2;
