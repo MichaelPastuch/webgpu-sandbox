@@ -168,7 +168,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 		onChange: (newFov) => wrapper.camera.updateFov(newFov * DEG_TO_RAD)
 	});
 
-	let brightness = 80;
+	let brightness = 50;
 	let redMul = 100;
 	let greenMul = 100;
 	let blueMul = 100;
@@ -181,10 +181,11 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			blueMul * brightness * scalar
 		);
 	}
+	updateAmbient();
 
 	widget({
-		label: "Brightness %",
-		initialValue: brightness, min: 0, max: 200,
+		label: "Ambient",
+		initialValue: brightness, min: 0, max: 100,
 		onChange: (newValue) => {
 			brightness = newValue;
 			updateAmbient();
@@ -192,7 +193,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	});
 	widget({
 		label: "Red %",
-		initialValue: redMul, min: 0, max: 200,
+		initialValue: redMul, min: 0, max: 100,
 		onChange: (newValue) => {
 			redMul = newValue;
 			updateAmbient();
@@ -200,7 +201,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	});
 	widget({
 		label: "Green %",
-		initialValue: greenMul, min: 0, max: 200,
+		initialValue: greenMul, min: 0, max: 100,
 		onChange: (newValue) => {
 			greenMul = newValue;
 			updateAmbient();
@@ -208,7 +209,7 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	});
 	widget({
 		label: "Blue %",
-		initialValue: blueMul, min: 0, max: 200,
+		initialValue: blueMul, min: 0, max: 100,
 		onChange: (newValue) => {
 			blueMul = newValue;
 			updateAmbient();

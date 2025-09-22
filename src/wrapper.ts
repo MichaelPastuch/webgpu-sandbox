@@ -78,7 +78,6 @@ export class Wrapper {
 			size: 4 * 3,
 			usage: SHADER_BUFFER
 		});
-		this.setAmbientColor(0.8, 0.8, 0.8);
 
 		// Bind global data for vertex/fragment shader usage
 		const globalBindGroupLayout = this.device.createBindGroupLayout({
@@ -186,7 +185,7 @@ export class Wrapper {
 				colors: "cmy"
 			})
 				.translate(-1, 0, 9)
-				.rotate(0, -Math.PI * 0.25)
+				.rotate(0, -Math.PI * 0.125)
 				.writeBuffer(),
 			new Triangle(this.device, modelBindGroupLayout)
 				.translate(0, 0, 6)
