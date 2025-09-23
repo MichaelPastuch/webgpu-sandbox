@@ -32,6 +32,14 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 });
 
+function widgetBox() {
+	const container = document.createElement("div");
+	container.style.display = "flex";
+	container.style.gap = "0.5rem";
+	main?.append(container);
+	return container;
+}
+
 interface IWidgetConfig {
 	readonly label: string;
 	readonly initialValue: number;
@@ -65,7 +73,7 @@ function widget({
 		}
 	});
 	container.append(input);
-	main?.append(container);
+	return container;
 }
 
 function monitor<T>(label: string): (update: T) => void {
@@ -162,11 +170,13 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	const leftClickLog = monitor("Left click");
 	const rightClickLog = monitor("Right Click");
 
-	widget({
+	const camBox = widgetBox();
+
+	camBox.append(widget({
 		label: "Y Field of View",
 		initialValue: 45, min: 1, max: 180,
 		onChange: (newFov) => wrapper.camera.updateFov(newFov * DEG_TO_RAD)
-	});
+	}));
 
 	let brightness = 50;
 	let redMul = 100;
@@ -183,38 +193,38 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	}
 	updateAmbient();
 
-	widget({
+	camBox.append(widget({
 		label: "Ambient",
 		initialValue: brightness, min: 0, max: 100,
 		onChange: (newValue) => {
 			brightness = newValue;
 			updateAmbient();
 		}
-	});
-	widget({
+	}));
+	camBox.append(widget({
 		label: "Red %",
 		initialValue: redMul, min: 0, max: 100,
 		onChange: (newValue) => {
 			redMul = newValue;
 			updateAmbient();
 		}
-	});
-	widget({
+	}));
+	camBox.append(widget({
 		label: "Green %",
 		initialValue: greenMul, min: 0, max: 100,
 		onChange: (newValue) => {
 			greenMul = newValue;
 			updateAmbient();
 		}
-	});
-	widget({
+	}));
+	camBox.append(widget({
 		label: "Blue %",
 		initialValue: blueMul, min: 0, max: 100,
 		onChange: (newValue) => {
 			blueMul = newValue;
 			updateAmbient();
 		}
-	});
+	}));
 
 	// Track orbit camera angles
 	// TODO Consider tracking pitch/yaw as integers, and convert to radians before render
@@ -246,11 +256,50 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	let lightAngle = 0;
 	const lightDistance = 2;
 
-	widget({
+	let lightR = 90;
+	let lightG = 90;
+	let lightB = 80;
+	const lightScalar = 0.01;
+	function updateLight() {
+		wrapper.light.color(
+			lightR * lightScalar,
+			lightG * lightScalar,
+			lightB * lightScalar
+		);
+	}
+	updateAmbient();
+
+	const lightBox = widgetBox();
+
+	lightBox.append(widget({
 		label: "Light velocity",
 		initialValue: 2, min: 0, max: 10,
 		onChange: (newVelocity) => lightVelocity = newVelocity
-	});
+	}));
+	lightBox.append(widget({
+		label: "Light Red",
+		initialValue: lightR, min: 0, max: 100,
+		onChange: (red) => {
+			lightR = red;
+			updateLight();
+		}
+	}));
+	lightBox.append(widget({
+		label: "Light Green",
+		initialValue: lightG, min: 0, max: 100,
+		onChange: (green) => {
+			lightG = green;
+			updateLight();
+		}
+	}));
+	lightBox.append(widget({
+		label: "Light Blue",
+		initialValue: lightB, min: 0, max: 100,
+		onChange: (blue) => {
+			lightB = blue;
+			updateLight();
+		}
+	}));
 
 	const wrapRadians = wrap(0, TWO_PI);
 	const clampRadians = clamp(Number.EPSILON, Math.PI - Number.EPSILON);
