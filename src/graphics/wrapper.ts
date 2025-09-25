@@ -1,14 +1,14 @@
-import { Camera } from "./camera";
-import { DEG_TO_RAD, DEPTH_TEXTURE, FRAGMENT_STAGE, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
-import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "./interface";
-import { Light } from "./lights/light";
-import { Circle } from "./models/circle";
-import type { Model } from "./models/model";
-import { Rectangle } from "./models/rectangle";
-import { Triangle } from "./models/trangle";
-import type { TVec3 } from "./utils";
+import { Camera } from "../camera";
+import { DEG_TO_RAD, DEPTH_TEXTURE, FRAGMENT_STAGE, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "../constants";
+import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "../interface";
+import { Light } from "../lights/light";
+import { Circle } from "../models/circle";
+import type { Model } from "../models/model";
+import { Rectangle } from "../models/rectangle";
+import { Triangle } from "../models/trangle";
+import type { TVec3 } from "../utils";
 
-export class Wrapper {
+export class Graphics {
 
 	public static async create(canvas: HTMLCanvasElement, gpu: IGpu) {
 		const context = canvas.getContext("webgpu") as unknown as IGpuCanvasContext;
@@ -20,7 +20,7 @@ export class Wrapper {
 			throw Error("gpu.requestAdapter failed");
 		}
 		const device = await adapter.requestDevice();
-		return new Wrapper(
+		return new Graphics(
 			device, canvas, context, gpu.getPreferredCanvasFormat(),
 		);
 	}

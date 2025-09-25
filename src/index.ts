@@ -1,8 +1,8 @@
 import { DEG_TO_RAD, HALF_PI, TWO_PI } from "./constants";
+import { Graphics } from "./graphics/wrapper";
 import { type IGpu } from "./interface";
 import { Time, TimeManager } from "./time";
 import { add, clamp, mul, normalize, RollingAverage, wrap, type TVec3 } from "./utils";
-import { Wrapper } from "./wrapper";
 
 const main = document.getElementById("main");
 if (main == null) {
@@ -95,7 +95,7 @@ function monitor<T>(label: string): (update: T) => void {
 
 // TODO Support "halting" render & sim with "Escape" key
 async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
-	const wrapper = await Wrapper.create(canvas, gpu);
+	const wrapper = await Graphics.create(canvas, gpu);
 
 	// Track keys as they are pressed and released
 	// TODO is there a way to get the "raw" keyboard key pressed?
