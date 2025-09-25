@@ -1,4 +1,5 @@
 import { DEG_TO_RAD, HALF_PI, TWO_PI } from "./constants";
+import { Input } from "./engine/input";
 import { Graphics } from "./graphics/wrapper";
 import { type IGpu } from "./interface";
 import { Time, TimeManager } from "./time";
@@ -97,52 +98,12 @@ function monitor<T>(label: string): (update: T) => void {
 async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 	const wrapper = await Graphics.create(canvas, gpu);
 
-	// Track keys as they are pressed and released
-	// TODO is there a way to get the "raw" keyboard key pressed?
-	// TODO Dont miss keys or clicks between engine "ticks", clear sets after handling?
-	// Pressing "w", is different to pressing "w" with shift held ("W")
-	const keyTracker = new Set<string>();
-	function keyDown(event: KeyboardEvent) {
-		keyTracker.add(event.key);
-	}
-	function keyUp(event: KeyboardEvent) {
-		keyTracker.delete(event.key);
-	}
-
-	// Track mouse key usage
-	const LEFT_CLICK = 0;
-	const RIGHT_CLICK = 2;
-	const buttonTracker = new Set<number>();
-	function mouseDown(event: MouseEvent) {
-		buttonTracker.add(event.button);
-	}
-	function mouseUp(event: MouseEvent) {
-		buttonTracker.delete(event.button);
-	}
-
-	// Track mouse movement when locked
-	let movementX = 0;
-	let movementY = 0;
-	function trackMovement(event: MouseEvent) {
-		movementX += event.movementX;
-		movementY += event.movementY;
-	}
+	// Track mouse/board on pointer focus
 	document.addEventListener("pointerlockchange", function () {
 		if (document.pointerLockElement === canvas) {
-			document.addEventListener("keydown", keyDown, false);
-			document.addEventListener("keyup", keyUp, false);
-			document.addEventListener("mousemove", trackMovement, false);
-			document.addEventListener("mousedown", mouseDown, false);
-			document.addEventListener("mouseup", mouseUp, false);
+			Input.enable();
 		} else {
-			document.removeEventListener("keydown", keyDown, false);
-			document.removeEventListener("keyup", keyUp, false);
-			document.removeEventListener("mousemove", trackMovement, false);
-			document.removeEventListener("mousedown", mouseDown, false);
-			document.removeEventListener("mouseup", mouseUp, false);
-			// "Unset" all mouse/keyboard tracking
-			keyTracker.clear();
-			buttonTracker.clear();
+			Input.disable()
 		}
 	}, false);
 
@@ -329,8 +290,9 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			TimeManager.engineUpdate = time;
 			engineAvg.update(TimeManager.engineDelta);
 
-			leftClickLog(buttonTracker.has(LEFT_CLICK));
-			rightClickLog(buttonTracker.has(RIGHT_CLICK));
+			const btns = Input.buttons;
+			leftClickLog(btns.has(Input.LEFT_CLICK));
+			rightClickLog(btns.has(Input.RIGHT_CLICK));
 
 			// TODO Sync now? Or "roll" change during render only
 			// Apply velocity from previous "tick"
@@ -338,32 +300,31 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			yaw = wrapRadians(yaw, vYaw * Time.engineScale);
 			pitch = clampRadians(pitch, vPitch * Time.engineScale);
 
-			// Record total mouse movement and reset
-			vYaw = -movementX * ORBIT_VELOCITY;
-			movementX = 0;
-			vPitch = movementY * ORBIT_VELOCITY;
-			movementY = 0;
+			// Mouse pitch/yaw control
+			vYaw = Input.readX * -ORBIT_VELOCITY;
+			vPitch = Input.readY * ORBIT_VELOCITY;
 
 			// Handle input
 			let tForward = 0;
 			let tRight = 0;
 			let tUp = 0;
-			if (keyTracker.has("w")) {
+			const keys = Input.keys;
+			if (keys.has("w")) {
 				tForward += 1;
 			}
-			if (keyTracker.has("s")) {
+			if (keys.has("s")) {
 				tForward -= 1;
 			}
-			if (keyTracker.has("d")) {
+			if (keys.has("d")) {
 				tRight += 1;
 			}
-			if (keyTracker.has("a")) {
+			if (keys.has("a")) {
 				tRight -= 1;
 			}
-			if (keyTracker.has(" ")) {
+			if (keys.has(" ")) {
 				tUp += 1;
 			}
-			if (keyTracker.has("Control")) {
+			if (keys.has("Control")) {
 				tUp -= 1;
 			}
 
@@ -385,9 +346,8 @@ async function initWebGpu(canvas: HTMLCanvasElement, gpu: IGpu) {
 			lightAngle = wrapRadians(lightAngle, lightVelocity * Time.engineScale);
 
 			// Enter fullscreen
-			if (keyTracker.has("Enter")) {
+			if (keys.has("Enter") && document.fullscreenElement == null) {
 				canvas.requestFullscreen();
-				keyTracker.delete("Enter");
 			}
 		}
 
