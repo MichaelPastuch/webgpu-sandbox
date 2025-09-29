@@ -7,6 +7,7 @@ import type { Model } from "../models/model";
 import { Rectangle } from "../models/rectangle";
 import { Triangle } from "../models/trangle";
 import type { TVec3 } from "../utils";
+import { shaders } from "./shaders.wgsl";
 
 export class Graphics {
 
@@ -65,14 +66,9 @@ export class Graphics {
 		// Initialise dimensions, depth buffer, and camera aspect ratio
 		this.resize(canvas.width, canvas.height);
 
-		// TODO Function to create shader module
 		// Prepare shaders
-		const shaderSrc = document.getElementById("shaders");
-		if (shaderSrc == null) {
-			throw Error("Unable to locate shaders #shaders");
-		}
 		this.module = this.device.createShaderModule({
-			code: shaderSrc.textContent
+			code: shaders
 		});
 
 		// Assemble ambient colour buffer
