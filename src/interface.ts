@@ -208,9 +208,11 @@ interface IGpuShaderModuleOpts {
 export interface IGpuBuffer { }
 
 interface IGpuBufferOpts {
+	readonly label?: string;
 	readonly size: number;
 	/** GPUBufferUsage */
 	readonly usage: unknown;
+	readonly mappedAtCreation?: boolean;
 }
 
 /** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUQueue) */

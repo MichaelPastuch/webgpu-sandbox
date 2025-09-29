@@ -1,5 +1,5 @@
 import type { IGpu } from "../interface";
-import { Graphics } from "../graphics/wrapper";
+import { Graphics } from "../graphics/graphics";
 import { Input } from "./input";
 import { DEG_TO_RAD, HALF_PI, TWO_PI } from "../constants";
 import { add, clamp, mul, normalize, RollingAverage, wrap, type TVec3 } from "../utils";

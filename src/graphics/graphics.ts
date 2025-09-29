@@ -77,8 +77,8 @@ export class Graphics {
 
 		// Assemble ambient colour buffer
 		this.ambientBuffer = this.device.createBuffer({
-			// float32 rgb
-			size: 4 * 3,
+			// rgb
+			size: 3 * Float32Array.BYTES_PER_ELEMENT,
 			usage: SHADER_BUFFER
 		});
 

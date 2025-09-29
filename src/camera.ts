@@ -44,11 +44,13 @@ export class Camera {
 
 	constructor(private readonly device: IGpuDevice) {
 		this.viewBuffer = this.device.createBuffer({
-			size: 4 * (3 * 16),
+			// 3 mat4x4
+			size: (3 * 16) * Float32Array.BYTES_PER_ELEMENT,
 			usage: SHADER_BUFFER
 		});
 		this.cameraBuffer = this.device.createBuffer({
-			size: 4 * (2 * 4),
+			// 2 vec3 (NOTE vec3 requires 4 numbers)
+			size: (2 * 4) * Float32Array.BYTES_PER_ELEMENT,
 			usage: SHADER_BUFFER
 		});
 		// Bind camera matrices data for vertex/fragment shader usage

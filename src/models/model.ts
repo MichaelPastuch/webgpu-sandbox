@@ -17,8 +17,8 @@ export abstract class Model {
 	constructor(protected readonly device: IGpuDevice, bindGroupLayout: IGpuBindGroupLayout) {
 		// Allocate buffer and bind group
 		this.transformBuffer = this.device.createBuffer({
-			// mat4x4 + mat3x3 (NOTE: 12 f32 required instead of 9)
-			size: 4 * (16 + 12),
+			// mat4x4 + mat3x3 (NOTE mat3x3 requires 12 instead of 9 entries)
+			size: (16 + 12) * Float32Array.BYTES_PER_ELEMENT,
 			usage: SHADER_BUFFER
 		});
 		this.bindGroup = this.device.createBindGroup({
