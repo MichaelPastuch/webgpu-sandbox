@@ -14,6 +14,7 @@ export class Engine {
 
 	// Record average engine time delta
 	private readonly engineDeltaAvg = new RollingAverage(50);
+	private readonly frameScaleAvg = new RollingAverage(50);
 
 	private constructor(
 		private readonly canvas: HTMLCanvasElement,
@@ -50,11 +51,9 @@ export class Engine {
 		});
 
 		// Initialise graphics
-
 		this.graphics.setAmbientColor(0.5, 0.5, 0.5);
 
 		// TODO Move into light class and control animation
-		// Animate light
 		this.graphics.light
 			.position(-1, 1, 2)
 			.color(0.9, 0.9, 0.8)
@@ -68,9 +67,9 @@ export class Engine {
 		const lightOriginX = 0;
 		const lightOriginY = 1;
 		const lightOriginZ = 3;
-		let lightVelocity = 2
-		let lightAngle = 0;
+		const lightVelocity = 2
 		const lightDistance = 2;
+		let lightAngle = 0;
 
 		// TODO Move into player controlled camera class
 		// Track camera focus
@@ -89,122 +88,108 @@ export class Engine {
 		const wrapRadians = wrap(0, TWO_PI);
 		const clampRadians = clamp(Number.EPSILON, Math.PI - Number.EPSILON);
 
-
 		// Establish render loop
-		// Simulation and frame rate must be less than or equal to device refresh rate
-		const SIM_RATE = 50;
+		// Simulation rate should ideally not be 
+		const SIM_RATE = 30;
 		const SIM_DURATION = 1000 / SIM_RATE;
-		let lastSimTime = 0;
 
-		// Target frame rate
-		const FRAME_RATE = 100;
-		const FRAME_DURATION = 1000 / FRAME_RATE;
-		let lastFrameTime = 0;
+		const tick = () => {
+			TimeManager.engineUpdate = performance.now();
+			this.engineDeltaAvg.update(TimeManager.engineDelta);
 
+			// Advance physics
+
+			// Apply velocity from previous "tick"
+			position = add(position, mul(velocity, Time.engineScale));
+			yaw = wrapRadians(yaw, vYaw * Time.engineScale);
+			pitch = clampRadians(pitch, vPitch * Time.engineScale);
+
+			lightAngle = wrapRadians(lightAngle, lightVelocity * Time.engineScale);
+
+			// Mouse pitch/yaw control
+			vYaw = Input.readX * -ORBIT_VELOCITY;
+			vPitch = Input.readY * ORBIT_VELOCITY;
+
+			// const btns = Input.buttons;
+
+			// Handle input
+			let tForward = 0;
+			let tRight = 0;
+			let tUp = 0;
+			const keys = Input.keys;
+			if (keys.has("w")) {
+				tForward += 1;
+			}
+			if (keys.has("s")) {
+				tForward -= 1;
+			}
+			if (keys.has("d")) {
+				tRight += 1;
+			}
+			if (keys.has("a")) {
+				tRight -= 1;
+			}
+			if (keys.has(" ")) {
+				tUp += 1;
+			}
+			if (keys.has("Control")) {
+				tUp -= 1;
+			}
+
+			// Assemble velocity from user input directions
+			if (tForward !== 0 || tRight !== 0 || tUp !== 0) {
+				const fwd = this.graphics.camera.forward;
+				const rgt = this.graphics.camera.right;
+				const direction = normalize([
+					fwd[0] * tForward + rgt[0] * tRight,
+					tUp,
+					fwd[2] * tForward + rgt[2] * tRight
+				]);
+				velocity = mul(direction, MOVE_VELOCITY);
+			} else {
+				velocity = [0, 0, 0];
+			}
+
+			// Enter fullscreen
+			if (keys.has("Enter") && document.fullscreenElement == null) {
+				this.canvas.requestFullscreen();
+			}
+		}
+
+		// Render frames
 		const frame = (time: number) => {
+			TimeManager.frameUpdate = time;
+			this.frameScaleAvg.update(Time.frameScale);
 
-			const simDeltaTime = time - lastSimTime;
-			// A "tick" has passed, update simulation
-			if (simDeltaTime >= SIM_DURATION) {
-				lastSimTime = time - (simDeltaTime % SIM_DURATION);
+			// Assume camera changes on every frame
+			// Extrapolate camera movement
+			const fFocus = add(position, mul(velocity, Time.frameScale));
+			const fPitch = clampRadians(pitch, vPitch * Time.frameScale);
+			const fYaw = wrapRadians(yaw, vYaw * Time.frameScale);
 
-				TimeManager.engineUpdate = time;
-				this.engineDeltaAvg.update(TimeManager.engineDelta);
+			// Use new positions for frame
+			this.graphics.camera.updateViewOrbital(fFocus, distance, fPitch, fYaw);
+			this.graphics.camera.writeBuffer();
 
-				// const btns = Input.buttons;
+			// Orbit light
+			const fLightAngle = wrapRadians(lightAngle, lightVelocity * Time.frameScale);
+			const fLightX = lightOriginX + lightDistance * Math.cos(fLightAngle);
+			const fLightZ = lightOriginZ + lightDistance * Math.sin(fLightAngle);
+			this.graphics.light
+				.position(fLightX, lightOriginY, fLightZ)
+				.writeBuffer();
 
-				// TODO Sync now? Or "roll" change during render only
-				// Apply velocity from previous "tick"
-				position = add(position, mul(velocity, Time.engineScale));
-				yaw = wrapRadians(yaw, vYaw * Time.engineScale);
-				pitch = clampRadians(pitch, vPitch * Time.engineScale);
-
-				// Mouse pitch/yaw control
-				vYaw = Input.readX * -ORBIT_VELOCITY;
-				vPitch = Input.readY * ORBIT_VELOCITY;
-
-				// Handle input
-				let tForward = 0;
-				let tRight = 0;
-				let tUp = 0;
-				const keys = Input.keys;
-				if (keys.has("w")) {
-					tForward += 1;
-				}
-				if (keys.has("s")) {
-					tForward -= 1;
-				}
-				if (keys.has("d")) {
-					tRight += 1;
-				}
-				if (keys.has("a")) {
-					tRight -= 1;
-				}
-				if (keys.has(" ")) {
-					tUp += 1;
-				}
-				if (keys.has("Control")) {
-					tUp -= 1;
-				}
-
-				// Assemble velocity from user input directions
-				if (tForward !== 0 || tRight !== 0 || tUp !== 0) {
-					const fwd = this.graphics.camera.forward;
-					const rgt = this.graphics.camera.right;
-					const direction = normalize([
-						fwd[0] * tForward + rgt[0] * tRight,
-						tUp,
-						fwd[2] * tForward + rgt[2] * tRight
-					]);
-					velocity = mul(direction, MOVE_VELOCITY);
-				} else {
-					velocity = [0, 0, 0];
-				}
-
-				// Advance physics
-				lightAngle = wrapRadians(lightAngle, lightVelocity * Time.engineScale);
-
-				// Enter fullscreen
-				if (keys.has("Enter") && document.fullscreenElement == null) {
-					this.canvas.requestFullscreen();
-				}
-			}
-
-			const frameTimestamp = performance.now();
-			const frameDeltaTime = frameTimestamp - lastFrameTime;
-			// A "frame" has passed, draw simulation state
-			if (frameDeltaTime >= FRAME_DURATION) {
-				lastFrameTime = frameTimestamp - (frameDeltaTime % FRAME_DURATION);
-
-				TimeManager.frameUpdate = frameTimestamp;
-
-				// Assume camera changes on every frame
-				// Extrapolate camera movement
-				const fFocus = add(position, mul(velocity, Time.frameScale));
-				const fYaw = wrapRadians(yaw, vYaw * Time.frameScale);
-				const fPitch = clampRadians(pitch, vPitch * Time.frameScale);
-
-				// Use new positions for frame
-				this.graphics.camera.updateViewOrbital(fFocus, distance, fPitch, fYaw);
-				this.graphics.camera.writeBuffer();
-
-				// Orbit light
-				const fLightAngle = wrapRadians(lightAngle, lightVelocity * Time.frameScale);
-				const fLightX = lightOriginX + lightDistance * Math.cos(fLightAngle);
-				const fLightZ = lightOriginZ + lightDistance * Math.sin(fLightAngle);
-				this.graphics.light.position(fLightX, lightOriginY, fLightZ)
-					.writeBuffer();
-
-				// Draw results
-				this.graphics.render();
-			}
+			// Draw results
+			this.graphics.render();
 
 			// Await next browser frame
 			requestAnimationFrame(frame);
 		}
 
-		// Start sim/render loop
+		// Start sim loop
+		setInterval(tick, SIM_DURATION);
 		TimeManager.engineUpdate = performance.now();
+		// Start render loop
 		requestAnimationFrame(frame);
 	}
 
@@ -219,8 +204,11 @@ export class Engine {
 		const monitorBox = widgetBox();
 		const [engineDelta, logEngineDelta] = monitor("Engine Delta Avg.");
 		monitorBox.append(engineDelta);
+		const [frameScale, logFrameScale] = monitor("Frame Scale");
+		monitorBox.append(frameScale);
 		setInterval(() => {
 			logEngineDelta(this.engineDeltaAvg.average);
+			logFrameScale(this.frameScaleAvg.average);
 		}, 1000);
 		container.append(monitorBox);
 	}
