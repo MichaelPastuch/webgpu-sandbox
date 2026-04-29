@@ -34,14 +34,16 @@ export interface IGpuTexture {
 }
 
 /** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createTexture) */
-interface IGpuTextureDescriptor {
+export interface IGpuTextureDescriptor {
 	readonly label?: string;
 	readonly dimension?: "1d" | "2d" | "3d";
 	// TODO Add formats as they are required
 	/** [WebGPU Reference](https://gpuweb.github.io/gpuweb/#enumdef-gputextureformat) */
 	readonly format: "rgba8uint" |
 	// Depth/stencil
-	"stencil8" | "depth16unorm" | "depth24plus" | "depth24plus-stencil8" | "depth32float";
+	"stencil8" | "depth16unorm" | "depth24plus" | "depth24plus-stencil8" | "depth32float" |
+	// Common
+	"bgra8unorm"
 	// Subject to dimension
 	// TODO create typings for each dimension with size constraints
 	readonly size: [width: number] | [number, number] | [number, number, number] |
