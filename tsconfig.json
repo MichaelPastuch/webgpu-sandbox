@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
     "target": "esnext",
+    "moduleResolution": "bundler",
     "rootDir": "src",
     "noEmit": true,
+    "allowArbitraryExtensions": true,
     "strict": true,
     "noImplicitAny": true,
     "noUnusedLocals": true,

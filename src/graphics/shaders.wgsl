@@ -1,9 +1,3 @@
-
-const modelDiffuse = 1;
-const modelSpecular = 1;
-const modelShininess = 1;
-
-export const shaders = /* wgsl */`
 @group(0) @binding(0) var<uniform> ambient: vec3f;
 
 struct View {
@@ -54,9 +48,9 @@ fn vertexShader(
 	);
 }
 
-const modelDiffuse = ${modelDiffuse};
-const modelSpecular = ${modelSpecular};
-const modelShininess = ${modelShininess};
+const modelDiffuse = 1;
+const modelSpecular = 1;
+const modelShininess = 1;
 
 @fragment
 fn fragmentShader(
@@ -91,4 +85,3 @@ fn fragmentShader(
 	let light = fma(diffuseCol + specularCol, vec3(attenuation), ambient);
 	return vec4(light * color, 1);
 }
-`;

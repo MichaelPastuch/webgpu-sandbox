@@ -14,7 +14,10 @@ const buildOpts = {
 	logLevel: "info",
 	entryPoints: ["src/index.ts"],
 	bundle: true,
-	outfile: "dist/index.js"
+	outfile: "dist/index.js",
+	loader: {
+		".wgsl": "text"
+	}
 };
 
 if (watchArg()) {

@@ -7,7 +7,7 @@ import type { Model } from "../models/model";
 import { Rectangle } from "../models/rectangle";
 import { Triangle } from "../models/trangle";
 import type { TVec3 } from "../utils";
-import { shaders } from "./shaders.wgsl";
+import shaders from "./shaders.wgsl";
 
 export class Graphics {
 
@@ -35,6 +35,11 @@ export class Graphics {
 	}
 
 	private depthTexture!: IGpuTexture;
+
+	// // TODO Use inverse view/projection matrix to extract position from depthTexture
+	// private gBufferPosition!: IGpuTexture;
+	// private gBufferNormal!: IGpuTexture;
+	// private gBufferColor!: IGpuTexture;
 
 	private readonly ambientBuffer: IGpuBuffer;
 	private ambientColor: TVec3 = [0, 0, 0];
@@ -219,13 +224,25 @@ export class Graphics {
 			this.height = height;
 			this.canvas.width = this.width;
 			this.canvas.height = this.height;
-			// Rebuild depth texture if different
+			// Rebuild depth texture
 			this.depthTexture?.destroy();
 			this.depthTexture = this.device.createTexture({
 				format: "depth24plus",
 				size: [this.width, this.height],
 				usage: DEPTH_TEXTURE
 			});
+			// Rebuild gbuffers
+			// const gBufferFormat: IGpuTextureDescriptor = {
+			// 	format: "bgra8unorm",
+			// 	size: [this.width, this.height],
+			// 	usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
+			// };
+			// this.gBufferPosition?.destroy();
+			// this.gBufferPosition = this.device.createTexture(gBufferFormat);
+			// this.gBufferNormal?.destroy();
+			// this.gBufferNormal = this.device.createTexture(gBufferFormat);
+			// this.gBufferColor?.destroy();
+			// this.gBufferColor = this.device.createTexture(gBufferFormat);
 			// Update projection matrix
 			this.camera.updateProjection(1, 100, this.aspect, 45 * DEG_TO_RAD);
 		}
@@ -255,6 +272,19 @@ export class Graphics {
 				storeOp: "store",
 				view: this.context.getCurrentTexture().createView()
 			}],
+			// colorAttachments: [{
+			// 	loadOp: "clear",
+			// 	storeOp: "store",
+			// 	view: this.gBufferPosition.createView()
+			// }, {
+			// 	loadOp: "clear",
+			// 	storeOp: "store",
+			// 	view: this.gBufferNormal.createView()
+			// }, {
+			// 	loadOp: "clear",
+			// 	storeOp: "store",
+			// 	view: this.gBufferColor.createView()
+			// }],
 			depthStencilAttachment: {
 				depthClearValue: 1.0,
 				depthLoadOp: "clear",
