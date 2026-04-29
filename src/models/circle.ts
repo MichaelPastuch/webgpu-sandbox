@@ -1,5 +1,5 @@
 import { Color } from "../color";
-import { INDEX_BUFFER, TWO_PI, VERTEX_BUFFER } from "../constants";
+import { TWO_PI } from "../constants";
 import type { IGpuBindGroupLayout, IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder } from "../interface";
 import { wrap } from "../utils";
 import { Model } from "./model";
@@ -45,7 +45,7 @@ export class Circle extends Model {
 		const vertices = new Float32Array(circleData);
 		this.vertexBuffer = this.device.createBuffer({
 			size: vertices.byteLength,
-			usage: VERTEX_BUFFER
+			usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
 		});
 		this.device.queue.writeBuffer(
 			this.vertexBuffer, 0,
@@ -82,7 +82,7 @@ export class Circle extends Model {
 		const indices = new Uint16Array(circleIndices);
 		this.indexBuffer = this.device.createBuffer({
 			size: indices.byteLength,
-			usage: INDEX_BUFFER
+			usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
 		});
 		this.device.queue.writeBuffer(
 			this.indexBuffer, 0,

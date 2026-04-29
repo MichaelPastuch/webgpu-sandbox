@@ -1,4 +1,3 @@
-import { SHADER_BUFFER } from "../constants";
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "../interface";
 import { type TVec3 } from "../utils";
 
@@ -15,7 +14,7 @@ export class Light {
 	constructor(private readonly device: IGpuDevice, bindGroupLayout: IGpuBindGroupLayout) {
 		this.lightBuffer = this.device.createBuffer({
 			size: 4 * (3 * 4),
-			usage: SHADER_BUFFER
+			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
 		});
 		this.bindGroup = this.device.createBindGroup({
 			layout: bindGroupLayout,

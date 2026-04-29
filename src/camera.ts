@@ -1,4 +1,3 @@
-import { FRAGMENT_STAGE, SHADER_BUFFER, VERTEX_STAGE } from "./constants";
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
 import { cross, dot, matrixMultiply4, normalize, sub, type TMatrix4, type TVec3 } from "./utils";
 
@@ -46,22 +45,22 @@ export class Camera {
 		this.viewBuffer = this.device.createBuffer({
 			// 3 mat4x4
 			size: (3 * 16) * Float32Array.BYTES_PER_ELEMENT,
-			usage: SHADER_BUFFER
+			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
 		});
 		this.cameraBuffer = this.device.createBuffer({
 			// 2 vec3 (NOTE vec3 requires 4 numbers)
 			size: (2 * 4) * Float32Array.BYTES_PER_ELEMENT,
-			usage: SHADER_BUFFER
+			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
 		});
 		// Bind camera matrices data for vertex/fragment shader usage
 		this.bindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
 				binding: 0,
-				visibility: VERTEX_STAGE,
+				visibility: GPUShaderStage.VERTEX,
 				buffer: { type: "uniform" }
 			}, {
 				binding: 1,
-				visibility: FRAGMENT_STAGE,
+				visibility: GPUShaderStage.FRAGMENT,
 				buffer: { type: "uniform" }
 			}]
 		});

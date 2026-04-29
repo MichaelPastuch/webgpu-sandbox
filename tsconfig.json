@@ -1,17 +1,21 @@
 {
-  "compilerOptions": {
-    "target": "esnext",
-    "moduleResolution": "bundler",
-    "rootDir": "src",
-    "noEmit": true,
-    "allowArbitraryExtensions": true,
-    "strict": true,
-    "noImplicitAny": true,
-    "noUnusedLocals": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "verbatimModuleSyntax": true,
-    "noUncheckedSideEffectImports": true,
-    "skipLibCheck": true
-  }
+	"compilerOptions": {
+		"target": "esnext",
+		"moduleResolution": "bundler",
+		"rootDir": "src",
+		"noEmit": true,
+		"allowArbitraryExtensions": true,
+		"strict": true,
+		"noImplicitAny": true,
+		"noUnusedLocals": true,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+		"verbatimModuleSyntax": true,
+		"noUncheckedSideEffectImports": true,
+		"skipLibCheck": true,
+		"typeRoots": [
+			"node_modules/@types",
+			"src/globals.ts"
+		]
+	}
 }

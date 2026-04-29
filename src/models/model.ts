@@ -1,5 +1,4 @@
-import { SHADER_BUFFER } from "../constants";
-import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder } from "../interface";
+import { type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuDevice, type IGpuRenderPassEncoder } from "../interface";
 import { fromRotation, inverse, matrixMultiply3, toMatrix, type TMatrix3, type TQuat, type TVec3 } from "../utils";
 
 export abstract class Model {
@@ -19,7 +18,7 @@ export abstract class Model {
 		this.transformBuffer = this.device.createBuffer({
 			// mat4x4 + mat3x3 (NOTE mat3x3 requires 12 instead of 9 entries)
 			size: (16 + 12) * Float32Array.BYTES_PER_ELEMENT,
-			usage: SHADER_BUFFER
+			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
 		});
 		this.bindGroup = this.device.createBindGroup({
 			layout: bindGroupLayout,

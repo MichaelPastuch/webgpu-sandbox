@@ -1,5 +1,5 @@
 import { Camera } from "../camera";
-import { DEG_TO_RAD, DEPTH_TEXTURE, FRAGMENT_STAGE, HALF_PI, SHADER_BUFFER, VERTEX_STAGE } from "../constants";
+import { DEG_TO_RAD, HALF_PI } from "../constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "../interface";
 import { Light } from "../lights/light";
 import { Circle } from "../models/circle";
@@ -80,14 +80,14 @@ export class Graphics {
 		this.ambientBuffer = this.device.createBuffer({
 			// rgb
 			size: 3 * Float32Array.BYTES_PER_ELEMENT,
-			usage: SHADER_BUFFER
+			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
 		});
 
 		// Bind global data for vertex/fragment shader usage
 		const globalBindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
 				binding: 0,
-				visibility: FRAGMENT_STAGE,
+				visibility: GPUShaderStage.FRAGMENT,
 				buffer: { type: "uniform" }
 			}]
 		});
@@ -103,7 +103,7 @@ export class Graphics {
 		const modelBindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
 				binding: 0,
-				visibility: VERTEX_STAGE,
+				visibility: GPUShaderStage.VERTEX,
 				buffer: { type: "uniform" }
 			}]
 		});
@@ -112,7 +112,7 @@ export class Graphics {
 		const lightBindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
 				binding: 0,
-				visibility: FRAGMENT_STAGE,
+				visibility: GPUShaderStage.FRAGMENT,
 				buffer: { type: "uniform" }
 			}]
 		});
@@ -229,7 +229,7 @@ export class Graphics {
 			this.depthTexture = this.device.createTexture({
 				format: "depth24plus",
 				size: [this.width, this.height],
-				usage: DEPTH_TEXTURE
+				usage: GPUTextureUsage.RENDER_ATTACHMENT
 			});
 			// Rebuild gbuffers
 			// const gBufferFormat: IGpuTextureDescriptor = {
