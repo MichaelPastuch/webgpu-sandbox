@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/MichaelPastuch/webgpu-sandbox#readme",
   "devDependencies": {
-    "esbuild": "0.25.9",
-    "typescript": "5.9.2"
+    "esbuild": "0.28.0",
+    "typescript": "6.0.3"
   }
 }

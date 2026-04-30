@@ -67,7 +67,7 @@ export class Engine {
 		const lightOriginX = 0;
 		const lightOriginY = 1;
 		const lightOriginZ = 3;
-		const lightVelocity = 2
+		const lightVelocity = 1;
 		const lightDistance = 2;
 		let lightAngle = 0;
 
