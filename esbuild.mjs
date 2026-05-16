@@ -10,9 +10,12 @@ function watchArg() {
 	return false;
 }
 
+// esbuild.CommonOptions
 const buildOpts = {
 	logLevel: "info",
+	format: "esm",
 	entryPoints: ["src/index.ts"],
+	external: ["mithril"],
 	bundle: true,
 	outfile: "dist/index.js",
 	loader: {

@@ -42,25 +42,3 @@ export function widget({
 	container.append(input);
 	return container;
 }
-
-export function monitor<T>(label: string): [
-	HTMLElement,
-	(newValue: T) => void
-] {
-	const container = document.createElement("div");
-	const lbl = document.createElement("pre");
-	lbl.innerText = label;
-	container.append(lbl);
-	const value = document.createElement("pre");
-	container.append(value);
-	let lastValue: T | null = null;
-	return [
-		container,
-		function (newValue: T) {
-			if (newValue !== lastValue) {
-				lastValue = newValue;
-				value.innerText = String(newValue);
-			}
-		}
-	]
-}

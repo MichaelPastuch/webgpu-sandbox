@@ -1,10 +1,10 @@
-import type { IGpu } from "../interface";
-import { Graphics } from "../graphics/graphics";
-import { Input } from "./input";
 import { DEG_TO_RAD, HALF_PI, TWO_PI } from "../constants";
-import { add, clamp, mul, normalize, RollingAverage, wrap, type TVec3 } from "../utils";
+import { Graphics } from "../graphics/graphics";
+import type { IGpu } from "../interface";
 import { Time, TimeManager } from "../time";
-import { monitor, widget, widgetBox } from "./debug";
+import { add, clamp, mul, normalize, RollingAverage, wrap, type TVec3 } from "../utils";
+import { widget, widgetBox } from "./debug";
+import { Input } from "./input";
 
 export class Engine {
 
@@ -14,7 +14,13 @@ export class Engine {
 
 	// Record average engine time delta
 	private readonly engineDeltaAvg = new RollingAverage(50);
+	public get averageDelta() {
+		return this.engineDeltaAvg.average;
+	}
 	private readonly frameScaleAvg = new RollingAverage(50);
+	public get averageFrameScale() {
+		return this.frameScaleAvg.average;
+	}
 
 	private constructor(
 		private readonly canvas: HTMLCanvasElement,
@@ -198,19 +204,6 @@ export class Engine {
 		this.graphics.camera.updateViewOrbital([0, 0, 0], 5, HALF_PI, -HALF_PI);
 		this.graphics.camera.writeBuffer();
 		this.graphics.render();
-	}
-
-	public debugOverlay(container: HTMLElement) {
-		const monitorBox = widgetBox();
-		const [engineDelta, logEngineDelta] = monitor("Engine Delta Avg.");
-		monitorBox.append(engineDelta);
-		const [frameScale, logFrameScale] = monitor("Frame Scale");
-		monitorBox.append(frameScale);
-		setInterval(() => {
-			logEngineDelta(this.engineDeltaAvg.average);
-			logFrameScale(this.frameScaleAvg.average);
-		}, 1000);
-		container.append(monitorBox);
 	}
 
 	public debugControls(mount: HTMLElement) {

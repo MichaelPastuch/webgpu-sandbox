@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Tinker and test WebGPU features",
   "scripts": {
+    "prebuild": "tsc",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "monitor": "tsc -w",
@@ -20,6 +21,7 @@
   },
   "homepage": "https://github.com/MichaelPastuch/webgpu-sandbox#readme",
   "devDependencies": {
+    "@types/mithril": "2.2.8",
     "esbuild": "0.28.0",
     "typescript": "6.0.3"
   }
