@@ -1,5 +1,6 @@
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
-import { cross, dot, matrixMultiply4, normalize, sub, type TMatrix4, type TVec3 } from "./utils";
+import { Matrix4 } from "./matrix/matrix4";
+import { cross, normalize, sub, type TVec3 } from "./utils";
 
 // WebGPU -> x and y range from -1 to +1, z ranges from 0 to 1
 // Any values outside of this range are clipped
@@ -31,10 +32,14 @@ export class Camera {
 	private near: number = 1;
 	private far: number = 20;
 	private aspect: number = 1;
-	private perspective: number = 0.4;
 
 	// View matrices
 	public readonly viewBuffer: IGpuBuffer;
+	readonly #viewData = new ArrayBuffer(3 * Matrix4.byteLength);
+	readonly #viewMatrix = new Matrix4(this.#viewData, 0);
+	readonly #projMatrix = new Matrix4(this.#viewData, Matrix4.byteLength);
+	readonly #viewProjMatrix = new Matrix4(this.#viewData, 2 * Matrix4.byteLength);
+
 	// Camera properties
 	private readonly cameraBuffer: IGpuBuffer;
 
@@ -43,8 +48,7 @@ export class Camera {
 
 	constructor(private readonly device: IGpuDevice) {
 		this.viewBuffer = this.device.createBuffer({
-			// 3 mat4x4
-			size: (3 * 16) * Float32Array.BYTES_PER_ELEMENT,
+			size: this.#viewData.byteLength,
 			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
 		});
 		this.cameraBuffer = this.device.createBuffer({
@@ -76,16 +80,16 @@ export class Camera {
 		});
 	}
 
-	// "Classic" D3DXMatrixLookAtRH view transform
-	// https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixlookatrh
+	// View matrix update
 	public updateViewDirection(position: TVec3, direction: TVec3, up?: TVec3) {
 		this.#position = position;
 		// Vector from camera position to reference point
 		this.#direction = normalize(direction);
-		this.#right = normalize(cross(this.#up, this.#direction));
 		if (up != null) {
 			this.#up = normalize(up);
 		}
+		this.#right = normalize(cross(this.#up, this.#direction));
+		this.#viewMatrix.lookAtRH(this.#position, this.#direction, this.#right);
 	}
 
 	public updateViewFocus(position: TVec3, focus: TVec3, up?: TVec3) {
@@ -104,23 +108,7 @@ export class Camera {
 		);
 	}
 
-	private get viewMatrix(): TMatrix4 {
-		const pos = this.#position;
-		// Assemble orthonormal vectors for camera space
-		const fwd = this.#direction;
-		const right = this.#right;
-		const up = cross(fwd, right);
-		// Translate and rotate the world back to the camera position
-		return [
-			right[0], right[1], right[2], -dot(right, pos),
-			up[0], up[1], up[2], -dot(up, pos),
-			fwd[0], fwd[1], fwd[2], -dot(fwd, pos),
-			0, 0, 0, 1
-		];
-	}
-
-	// Perspective projection transform
-	// https://www.youtube.com/watch?v=U0_ONQQ5ZNM
+	// Projection matrix update
 	public updateProjection(near: number, far: number, aspectRatio: number, fovY: number) {
 		this.near = near;
 		this.far = far;
@@ -129,54 +117,20 @@ export class Camera {
 	}
 
 	public updateFov(fovY: number) {
-		this.perspective = Math.tan(fovY * 0.5);
-	}
-
-	/** Perspective projection, distant objects shrink (orthographic * perspective) */
-	private get perspProjectionMatrix(): TMatrix4 {
-		// Define perspective bottom and right planes from vertical fov
-		const bottom = this.near * this.perspective;
-		const right = this.near * this.aspect * this.perspective;
-		const zScale = -1 / (this.near - this.far);
-		// Use w to "divide" everything by z, therefore z component needs to be z^2
-		return [
-			this.near / right, 0, 0, 0,
-			0, this.near / bottom, 0, 0,
-			0, 0, this.far * zScale, -this.far * this.near * zScale,
-			0, 0, 1, 0
-		];
-	}
-
-	/** Orthographic projection, objects are their set size irregardless of distance */
-	private get orthoProjectionMatrix(): TMatrix4 {
-		// Assume projection is as wde as it is deep
-		const size = this.far - this.near
-		const height = size / this.aspect;
-		return [
-			// x = -1 to +1
-			2 / size, 0, 0, 0,
-			// y = -1 to +1
-			0, 2 / height, 0, 0,
-			// z = 0 to +1
-			0, 0, 1 / size, -1 / size,
-			0, 0, 0, 1
-		];
+		this.perspectiveMode
+			? this.#projMatrix.perspectiveProjection(this.near, this.far, this.aspect, fovY)
+			: this.#projMatrix.orthoProjectionMatrix(this.near, this.far, this.aspect);
 	}
 
 	public writeBuffer() {
-		// Write view matrices for vertex shaders
-		const viewMatrix = this.viewMatrix;
-		const projMatrix = this.perspectiveMode
-			? this.perspProjectionMatrix
-			: this.orthoProjectionMatrix;
-		const viewData = new Float32Array([
-			...viewMatrix,
-			...projMatrix,
-			...matrixMultiply4(viewMatrix, projMatrix)
-		]);
+		// Update view x projection
+		this.#viewProjMatrix.multiply(
+			this.#viewMatrix,
+			this.#projMatrix
+		);
 		this.device.queue.writeBuffer(
 			this.viewBuffer, 0,
-			viewData, 0, viewData.length
+			this.#viewData, 0, this.#viewData.byteLength
 		);
 		// Write camera data for fragment shaders
 		const cameraData = new Float32Array([
