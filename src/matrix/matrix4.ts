@@ -1,4 +1,4 @@
-import { cross, dot, type TVec3 } from "../utils";
+import { cross, dot, matrixMultiply3, toMatrix, type TQuat, type TVec3 } from "../utils";
 
 type TMatrix4 = [
 	number, number, number, number,
@@ -26,7 +26,7 @@ export class Matrix4 {
 			0, 1, 0, 0,
 			0, 0, 1, 0,
 			0, 0, 0, 1
-		]);
+		] satisfies TMatrix4);
 	}
 
 	multiply(left: Matrix4, right: Matrix4) {
@@ -53,7 +53,7 @@ export class Matrix4 {
 			a[1] * b[12] + a[5] * b[13] + a[9] * b[14] + a[13] * b[15],
 			a[2] * b[12] + a[6] * b[13] + a[10] * b[14] + a[14] * b[15],
 			a[3] * b[12] + a[7] * b[13] + a[11] * b[14] + a[15] * b[15]
-		]);
+		] satisfies TMatrix4);
 	}
 
 	// "Classic" D3DXMatrixLookAtRH view transform
@@ -66,7 +66,7 @@ export class Matrix4 {
 			up[0], up[1], up[2], -dot(up, pos),
 			fwd[0], fwd[1], fwd[2], -dot(fwd, pos),
 			0, 0, 0, 1
-		]);
+		] satisfies TMatrix4);
 	}
 
 	// Perspective projection transform
@@ -85,13 +85,13 @@ export class Matrix4 {
 			0, near / bottom, 0, 0,
 			0, 0, far * zScale, -far * near * zScale,
 			0, 0, 1, 0
-		]);
+		] satisfies TMatrix4);
 	}
 
 	/** Orthographic projection, objects are their set size irregardless of distance */
 	orthoProjectionMatrix(near: number, far: number, aspectRatio: number) {
 		// Assume projection is as wde as it is deep
-		const size = far - near
+		const size = far - near;
 		const height = size / aspectRatio;
 		this.#data.set([
 			// x = -1 to +1
@@ -101,6 +101,26 @@ export class Matrix4 {
 			// z = 0 to +1
 			0, 0, 1 / size, -1 / size,
 			0, 0, 0, 1
-		]);
+		] satisfies TMatrix4);
 	}
+
+	postitionRotationScale(pos: TVec3, rot: TQuat, scalar: number = 1) {
+		const rotation = toMatrix(rot);
+		const mat3 = scalar === 1
+			? rotation
+			// TODO "identity-like multiplier", ignore 0 elements
+			: matrixMultiply3([
+				scalar, 0, 0,
+				0, scalar, 0,
+				0, 0, scalar
+			], rotation);
+		this.#data.set([
+			mat3[0], mat3[1], mat3[2], pos[0],
+			mat3[3], mat3[4], mat3[5], pos[1],
+			mat3[6], mat3[7], mat3[8], pos[2],
+			0, 0, 0, 1
+		] satisfies TMatrix4);
+	}
+
+	// TODO Skew support
 }
