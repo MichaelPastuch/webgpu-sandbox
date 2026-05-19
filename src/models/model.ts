@@ -1,5 +1,7 @@
 import { type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuDevice, type IGpuRenderPassEncoder } from "../interface";
-import { fromRotation, inverse, matrixMultiply3, toMatrix, type TMatrix3, type TQuat, type TVec3 } from "../utils";
+import { Matrix3 } from "../matrix/matrix3";
+import { Matrix4 } from "../matrix/matrix4";
+import { fromRotation, inverse, type TQuat, type TVec3 } from "../utils";
 
 export abstract class Model {
 
@@ -10,14 +12,14 @@ export abstract class Model {
 	private rotation: TQuat = [1, 0, 0, 0];
 	private scalar: number = 1;
 
-	// TODO Rework invese transform if supporting non-uniform scaling
-	// TODO Skew support
+	readonly #modelData = new ArrayBuffer(Matrix4.byteLength + Matrix3.byteLength);
+	readonly #modelMatrix = new Matrix4(this.#modelData, 0);
+	readonly #normalMatrix = new Matrix3(this.#modelData, Matrix4.byteLength);
 
 	constructor(protected readonly device: IGpuDevice, bindGroupLayout: IGpuBindGroupLayout) {
 		// Allocate buffer and bind group
 		this.transformBuffer = this.device.createBuffer({
-			// mat4x4 + mat3x3 (NOTE mat3x3 requires 12 instead of 9 entries)
-			size: (16 + 12) * Float32Array.BYTES_PER_ELEMENT,
+			size: this.#modelData.byteLength,
 			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
 		});
 		this.bindGroup = this.device.createBindGroup({
@@ -46,38 +48,13 @@ export abstract class Model {
 		return this;
 	}
 
-	private scaleRotate(rotation: TMatrix3) {
-		return matrixMultiply3([
-			this.scalar, 0, 0,
-			0, this.scalar, 0,
-			0, 0, this.scalar
-		], rotation);
-	}
-
 	public writeBuffer() {
-		const rotation = toMatrix(this.rotation);
-		// Invert rotation to build normal matrix
-		const inv3 = toMatrix(inverse(this.rotation));
-		// Skip scaling if not needed
-		const mat3 = this.scalar !== 1
-			? this.scaleRotate(rotation)
-			: rotation
-		// Merge scale & rotate into translation
-		const transformMatrix = new Float32Array([
-			mat3[0], mat3[1], mat3[2], this.translation[0],
-			mat3[3], mat3[4], mat3[5], this.translation[1],
-			mat3[6], mat3[7], mat3[8], this.translation[2],
-			0, 0, 0, 1,
-			// 3x3 matrices need columns packing with extra zeroes
-			// Transpose inverse rotation matrix
-			inv3[0], inv3[3], inv3[6], 0,
-			inv3[1], inv3[4], inv3[7], 0,
-			inv3[2], inv3[5], inv3[8], 0
-
-		]);
+		this.#modelMatrix.postitionRotationScale(this.translation, this.rotation, this.scalar);
+		// TODO Rework invese transform if supporting non-uniform scaling
+		this.#normalMatrix.transposeRotation(inverse(this.rotation));
 		this.device.queue.writeBuffer(
 			this.transformBuffer, 0,
-			transformMatrix, 0, transformMatrix.length
+			this.#modelData, 0, this.#modelData.byteLength
 		);
 		return this;
 	}
