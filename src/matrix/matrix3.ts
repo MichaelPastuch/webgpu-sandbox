@@ -1,4 +1,4 @@
-import type { Quaternion } from "../vector/Quaternion";
+import type { Quaternion } from "../vector/quaternion";
 
 // 3x3 matrices need columns packing with extra zeroes
 type TMatrix3 = [

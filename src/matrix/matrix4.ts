@@ -1,5 +1,5 @@
-import type { Quaternion } from "../vector/Quaternion";
-import type { Vector3 } from "../vector/Vector3";
+import type { Quaternion } from "../vector/quaternion";
+import type { Vector3 } from "../vector/vector3";
 
 /**
  * NOTE

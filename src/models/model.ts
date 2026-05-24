@@ -1,8 +1,8 @@
 import { type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuDevice, type IGpuRenderPassEncoder } from "../interface";
 import { Matrix3 } from "../matrix/matrix3";
 import { Matrix4 } from "../matrix/matrix4";
-import { Quaternion } from "../vector/Quaternion";
-import { Vector3 } from "../vector/Vector3";
+import { Quaternion } from "../vector/quaternion";
+import { Vector3 } from "../vector/vector3";
 
 export abstract class Model {
 

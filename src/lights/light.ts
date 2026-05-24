@@ -1,5 +1,5 @@
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "../interface";
-import { Vector3 } from "../vector/Vector3";
+import { Vector3 } from "../vector/vector3";
 
 export class Light {
 

@@ -1,7 +1,7 @@
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
 import { Matrix4 } from "./matrix/matrix4";
 import { type TVec3 } from "./utils";
-import { Vector3 } from "./vector/Vector3";
+import { Vector3 } from "./vector/vector3";
 
 // WebGPU -> x and y range from -1 to +1, z ranges from 0 to 1
 // Any values outside of this range are clipped
