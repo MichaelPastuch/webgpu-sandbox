@@ -1,23 +1,6 @@
 
 export type TVec3 = [number, number, number];
 
-export type TQuat = [number, number, number, number];
-
-/**
- * NOTE
- * WebGPU stores matrix values by columns, as opposed to by rows
- * | 0 | 4 | 8 |12 |
- * | 1 | 5 | 9 |13 |
- * | 2 | 6 |10 |14 |
- * | 3 | 7 |11 |15 |
- */
-
-export type TMatrix3 = [
-	number, number, number,
-	number, number, number,
-	number, number, number
-];
-
 /** Return function that applies a delta to a given value, wrapping a given range */
 export function wrap(min: number, max: number) {
 	return function (value: number, delta: number) {
@@ -60,31 +43,9 @@ export function clamp(min: number, max: number) {
 	}
 }
 
-export function matrixMultiply3(lhs: TMatrix3, rhs: TMatrix3): TMatrix3 {
-	return [
-		// Col 1
-		lhs[0] * rhs[0] + lhs[3] * rhs[1] + lhs[6] * rhs[2],
-		lhs[1] * rhs[0] + lhs[4] * rhs[1] + lhs[7] * rhs[2],
-		lhs[2] * rhs[0] + lhs[5] * rhs[1] + lhs[8] * rhs[2],
-		// Col 2
-		lhs[0] * rhs[3] + lhs[3] * rhs[4] + lhs[6] * rhs[5],
-		lhs[1] * rhs[3] + lhs[4] * rhs[4] + lhs[7] * rhs[5],
-		lhs[2] * rhs[3] + lhs[5] * rhs[4] + lhs[8] * rhs[5],
-		// Col 3
-		lhs[0] * rhs[6] + lhs[3] * rhs[7] + lhs[6] * rhs[8],
-		lhs[1] * rhs[6] + lhs[4] * rhs[7] + lhs[7] * rhs[8],
-		lhs[2] * rhs[6] + lhs[5] * rhs[7] + lhs[8] * rhs[8]
-	];
-}
-
 /** Create vector combining lhs and rhs */
 export function add(lhs: TVec3, rhs: TVec3): TVec3 {
 	return [lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]];
-}
-
-/** Create vector from lhs to rhs */
-export function sub(lhs: TVec3, rhs: TVec3): TVec3 {
-	return [rhs[0] - lhs[0], rhs[1] - lhs[1], rhs[2] - lhs[2]]
 }
 
 export function mul(vec: TVec3, mul: number): TVec3 {
@@ -99,59 +60,6 @@ export function magnitude(vec: TVec3) {
 export function normalize(vec: TVec3): TVec3 {
 	const mag = magnitude(vec);
 	return [vec[0] / mag, vec[1] / mag, vec[2] / mag];
-}
-
-export function dot(lhs: TVec3, rhs: TVec3): number {
-	return lhs[0] * rhs[0] + lhs[1] * rhs[1] + lhs[2] * rhs[2];
-}
-
-export function cross(lhs: TVec3, rhs: TVec3): TVec3 {
-	return [
-		// Xyzzy
-		lhs[1] * rhs[2] - lhs[2] * rhs[1],
-		lhs[2] * rhs[0] - lhs[0] * rhs[2],
-		lhs[0] * rhs[1] - lhs[1] * rhs[0]
-	];
-}
-
-/** Create quaternion from euler angles */
-export function fromRotation(pitch: number, yaw: number, roll: number = 0): TQuat {
-	// Consider profiling: cos(x)^2 = 1 - sin(x)^2
-	// Ideally the js optimiser uses the FSINCOS instruction here
-	const halfPitch = pitch * 0.5;
-	const halfRoll = roll * 0.5;
-	const halfYaw = yaw * 0.5;
-	const cU = Math.cos(halfPitch);
-	const sU = Math.sin(halfPitch);
-	const cV = Math.cos(halfYaw);
-	const sV = Math.sin(halfYaw);
-	const cW = Math.cos(halfRoll);
-	const sW = Math.sin(halfRoll);
-	return [
-		cU * cV * cW + sU * sV * sW,
-		sU * cV * cW - cU * sV * sW,
-		cU * sV * cW + sU * cV * sW,
-		cU * cV * sW - sU * sV * cW
-	];
-}
-
-/** Invert quaterion */
-export function inverse([q0, q1, q2, q3]: TQuat): TQuat {
-	return [q0, -q1, -q2, -q3];
-}
-
-/** Create 3x3 matrix rotation subset form quaternion */
-export function toMatrix([q0, q1, q2, q3]: TQuat): TMatrix3 {
-	const q1s2 = q1 * q1 * 2;
-	const q2s2 = q2 * q2 * 2;
-	const q3s2 = q3 * q3 * 2;
-	// Consider and profile if needed
-	// const q1q22 = 2 * q1 * q2;
-	return [
-		1 - q2s2 - q3s2, 2 * q1 * q2 - 2 * q0 * q3, 2 * q1 * q3 + 2 * q0 * q2,
-		2 * q1 * q2 + 2 * q0 * q3, 1 - q1s2 - q3s2, 2 * q2 * q3 - 2 * q0 * q1,
-		2 * q1 * q3 - 2 * q0 * q2, 2 * q2 * q3 + 2 * q0 * q1, 1 - q1s2 - q2s2
-	];
 }
 
 export class RollingAverage {

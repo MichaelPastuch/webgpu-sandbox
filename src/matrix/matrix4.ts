@@ -1,4 +1,3 @@
-import { dot } from "../utils";
 import type { Quaternion } from "../vector/Quaternion";
 import type { Vector3 } from "../vector/Vector3";
 
@@ -68,15 +67,14 @@ export class Matrix4 {
 	// "Classic" D3DXMatrixLookAtRH view transform
 	// https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixlookatrh
 	lookAtRH(position: Vector3, forward: Vector3, up: Vector3, right: Vector3) {
-		const p = position._;
 		const f = forward._;
 		const u = up._;
 		const r = right._;
 		// Translate and rotate the world back to the camera position
 		const d = this.#data;
-		d[0] = r[0]; d[1] = r[1]; d[2] = r[2]; d[3] = -dot(r, p);
-		d[4] = u[0]; d[5] = u[1]; d[6] = u[2]; d[7] = -dot(u, p);
-		d[8] = f[0]; d[9] = f[1]; d[10] = f[2]; d[11] = -dot(f, p);
+		d[0] = r[0]; d[1] = r[1]; d[2] = r[2]; d[3] = -right.dot(position);
+		d[4] = u[0]; d[5] = u[1]; d[6] = u[2]; d[7] = -up.dot(position);
+		d[8] = f[0]; d[9] = f[1]; d[10] = f[2]; d[11] = -forward.dot(position);
 		// TODO This could be done once only
 		d[12] = 0; d[13] = 0; d[14] = 0; d[15] = 1;
 	}
