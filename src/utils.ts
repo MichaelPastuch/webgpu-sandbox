@@ -1,3 +1,4 @@
+import { TWO_PI } from "./constants";
 
 export type TVec3 = [number, number, number];
 
@@ -14,6 +15,8 @@ export function wrap(min: number, max: number) {
 		}
 	}
 }
+
+export const wrapRadians = wrap(0, TWO_PI);
 
 /** Return function that applies a delta to a given value, over/undeflowing back to min/max */
 export function overflow(min: number, max: number) {
