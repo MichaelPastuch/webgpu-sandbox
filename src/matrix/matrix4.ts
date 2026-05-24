@@ -1,4 +1,5 @@
-import { dot, type TQuat, type TVec3 } from "../utils";
+import { dot } from "../utils";
+import type { Quaternion } from "../vector/Quaternion";
 import type { Vector3 } from "../vector/Vector3";
 
 /**
@@ -113,18 +114,19 @@ export class Matrix4 {
 		d[12] = 0; d[13] = 0; d[14] = 0; d[15] = 1;
 	}
 
-	postitionRotationScale(pos: TVec3, rot: TQuat, scalar: number = 1) {
+	postitionRotationScale(position: Vector3, rotation: Quaternion, scalar: number = 1) {
 		const d = this.#data;
-		const [q0, q1, q2, q3] = rot;
-		const q0q1 = 2 * q0 * q1;
-		const q0q2 = 2 * q0 * q2;
-		const q0q3 = 2 * q0 * q3;
-		const q1q1 = 2 * q1 * q1;
-		const q1q2 = 2 * q1 * q2;
-		const q1q3 = 2 * q1 * q3;
-		const q2q2 = 2 * q2 * q2;
-		const q2q3 = 2 * q2 * q3;
-		const q3q3 = 2 * q3 * q3;
+		const pos = position._;
+		const q = rotation._;
+		const q0q1 = 2 * q[0] * q[1];
+		const q0q2 = 2 * q[0] * q[2];
+		const q0q3 = 2 * q[0] * q[3];
+		const q1q1 = 2 * q[1] * q[1];
+		const q1q2 = 2 * q[1] * q[2];
+		const q1q3 = 2 * q[1] * q[3];
+		const q2q2 = 2 * q[2] * q[2];
+		const q2q3 = 2 * q[2] * q[3];
+		const q3q3 = 2 * q[3] * q[3];
 		// 3x3 scaled rotation with seperate translation
 		d[0] = scalar * (1 - q2q2 - q3q3); // x scale
 		d[1] = scalar * (q1q2 - q0q3); // y scale

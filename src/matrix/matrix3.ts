@@ -1,4 +1,4 @@
-import { toMatrix, type TQuat } from "../utils";
+import type { Quaternion } from "../vector/Quaternion";
 
 // 3x3 matrices need columns packing with extra zeroes
 type TMatrix3 = [
@@ -27,12 +27,21 @@ export class Matrix3 {
 		d[8] = 0; d[9] = 0; d[10] = 1; //d[11] = 0;
 	}
 
-	transposeRotation(rot: TQuat) {
-		const inv3 = toMatrix(rot);
+	transposeRotation(rotation: Quaternion) {
 		const d = this.#data;
-		d[0] = inv3[0]; d[1] = inv3[3]; d[2] = inv3[6]; //d[3] = 0;
-		d[4] = inv3[1]; d[5] = inv3[4]; d[6] = inv3[7]; //d[7] = 0;
-		d[8] = inv3[2]; d[9] = inv3[5]; d[10] = inv3[8]; //d[11] = 0;
+		const q = rotation._;
+		const q0q1 = 2 * q[0] * q[1];
+		const q0q2 = 2 * q[0] * q[2];
+		const q0q3 = 2 * q[0] * q[3];
+		const q1q1 = 2 * q[1] * q[1];
+		const q1q2 = 2 * q[1] * q[2];
+		const q1q3 = 2 * q[1] * q[3];
+		const q2q2 = 2 * q[2] * q[2];
+		const q2q3 = 2 * q[2] * q[3];
+		const q3q3 = 2 * q[3] * q[3];
+		d[0] = 1 - q2q2 - q3q3; d[1] = q1q2 + q0q3; d[2] = q1q3 - q0q2; //d[3] = 0;
+		d[4] = q1q2 - q0q3; d[5] = 1 - q1q1 - q3q3; d[6] = q2q3 + q0q1; //d[7] = 0;
+		d[8] = q1q3 + q0q2; d[9] = q2q3 - q0q1; d[10] = 1 - q1q1 - q2q2; //d[11] = 0;
 	}
 
 }

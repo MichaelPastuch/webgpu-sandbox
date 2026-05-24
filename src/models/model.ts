@@ -1,16 +1,18 @@
 import { type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuDevice, type IGpuRenderPassEncoder } from "../interface";
 import { Matrix3 } from "../matrix/matrix3";
 import { Matrix4 } from "../matrix/matrix4";
-import { fromRotation, inverse, type TQuat, type TVec3 } from "../utils";
+import { Quaternion } from "../vector/Quaternion";
+import { Vector3 } from "../vector/Vector3";
 
 export abstract class Model {
 
-	private readonly transformBuffer: IGpuBuffer;
+	readonly #transformBuffer: IGpuBuffer;
 	public readonly bindGroup: IGpuBindGroup;
 
-	private translation: TVec3 = [0, 0, 0];
-	private rotation: TQuat = [1, 0, 0, 0];
-	private scalar: number = 1;
+	protected readonly translation = Vector3.unmapped();
+	protected readonly rotation = Quaternion.unmapped();
+	#normalRotation = Quaternion.unmapped();
+	protected scalar: number = 1;
 
 	readonly #modelData = new ArrayBuffer(Matrix4.byteLength + Matrix3.byteLength);
 	readonly #modelMatrix = new Matrix4(this.#modelData, 0);
@@ -18,7 +20,7 @@ export abstract class Model {
 
 	constructor(protected readonly device: IGpuDevice, bindGroupLayout: IGpuBindGroupLayout) {
 		// Allocate buffer and bind group
-		this.transformBuffer = this.device.createBuffer({
+		this.#transformBuffer = this.device.createBuffer({
 			size: this.#modelData.byteLength,
 			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
 		});
@@ -26,20 +28,19 @@ export abstract class Model {
 			layout: bindGroupLayout,
 			entries: [{
 				binding: 0,
-				resource: { buffer: this.transformBuffer }
+				resource: { buffer: this.#transformBuffer }
 			}]
 		});
 	}
 
 	public translate(x: number, y: number, z: number) {
-		this.translation[0] = x;
-		this.translation[1] = y;
-		this.translation[2] = z;
+		this.translation.set(x, y, z);
 		return this;
 	}
 
 	public rotate(pitch: number, yaw: number, roll?: number) {
-		this.rotation = fromRotation(pitch, yaw, roll);
+		this.rotation.fromRotation(pitch, yaw, roll);
+		this.#normalRotation.inverse(this.rotation);
 		return this;
 	}
 
@@ -49,11 +50,15 @@ export abstract class Model {
 	}
 
 	public writeBuffer() {
-		this.#modelMatrix.postitionRotationScale(this.translation, this.rotation, this.scalar);
+		this.#modelMatrix.postitionRotationScale(
+			this.translation,
+			this.rotation,
+			this.scalar
+		);
 		// TODO Rework invese transform if supporting non-uniform scaling
-		this.#normalMatrix.transposeRotation(inverse(this.rotation));
+		this.#normalMatrix.transposeRotation(this.#normalRotation);
 		this.device.queue.writeBuffer(
-			this.transformBuffer, 0,
+			this.#transformBuffer, 0,
 			this.#modelData, 0, this.#modelData.byteLength
 		);
 		return this;
