@@ -3,15 +3,11 @@
 struct View {
 	view: mat4x4f,
 	proj: mat4x4f,
-	viewProj: mat4x4f
-}
-@group(1) @binding(0) var<uniform> view: View;
-
-struct Camera {
+	viewProj: mat4x4f,
 	position: vec3f,
 	direction: vec3f
-};
-@group(1) @binding(1) var<uniform> camera: Camera;
+}
+@group(1) @binding(0) var<uniform> view: View;
 
 struct Model {
 	transform: mat4x4f,
@@ -68,7 +64,7 @@ fn fragmentShader(
 	let diffuseCol = modelDiffuse * diffuse * light.color;
 
 	// Specular - Blinn
-	let viewDir = normalize(camera.position - position.xyz);
+	let viewDir = normalize(view.position - position.xyz);
 	let midDir = normalize(lightDir + viewDir);
 	let specular = pow(max(dot(normalDir, midDir), 0.0), modelShininess);
 	let specularCol = modelSpecular * specular * light.color;

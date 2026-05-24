@@ -1,4 +1,14 @@
-import { cross, dot, matrixMultiply3, toMatrix, type TQuat, type TVec3 } from "../utils";
+import { dot, type TQuat, type TVec3 } from "../utils";
+import type { Vector3 } from "../vector/Vector3";
+
+/**
+ * NOTE
+ * WebGPU stores matrix values by columns, as opposed to by rows
+ * | 0 | 4 | 8 |12 |
+ * | 1 | 5 | 9 |13 |
+ * | 2 | 6 |10 |14 |
+ * | 3 | 7 |11 |15 |
+ */
 
 type TMatrix4 = [
 	number, number, number, number,
@@ -56,13 +66,16 @@ export class Matrix4 {
 
 	// "Classic" D3DXMatrixLookAtRH view transform
 	// https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixlookatrh
-	lookAtRH(pos: TVec3, fwd: TVec3, rgt: TVec3) {
-		const up = cross(fwd, rgt);
+	lookAtRH(position: Vector3, forward: Vector3, up: Vector3, right: Vector3) {
+		const p = position._;
+		const f = forward._;
+		const u = up._;
+		const r = right._;
 		// Translate and rotate the world back to the camera position
 		const d = this.#data;
-		d[0] = rgt[0]; d[1] = rgt[1]; d[2] = rgt[2]; d[3] = -dot(rgt, pos);
-		d[4] = up[0]; d[5] = up[1]; d[6] = up[2]; d[7] = -dot(up, pos);
-		d[8] = fwd[0]; d[9] = fwd[1]; d[10] = fwd[2]; d[11] = -dot(fwd, pos);
+		d[0] = r[0]; d[1] = r[1]; d[2] = r[2]; d[3] = -dot(r, p);
+		d[4] = u[0]; d[5] = u[1]; d[6] = u[2]; d[7] = -dot(u, p);
+		d[8] = f[0]; d[9] = f[1]; d[10] = f[2]; d[11] = -dot(f, p);
 		// TODO This could be done once only
 		d[12] = 0; d[13] = 0; d[14] = 0; d[15] = 1;
 	}
@@ -87,7 +100,7 @@ export class Matrix4 {
 
 	/** Orthographic projection, objects are their set size irregardless of distance */
 	orthoProjectionMatrix(near: number, far: number, aspectRatio: number) {
-		// Assume projection is as wde as it is deep
+		// Assume projection is as wide as it is deep
 		const size = far - near;
 		const height = size / aspectRatio;
 		const d = this.#data;
@@ -101,21 +114,32 @@ export class Matrix4 {
 	}
 
 	postitionRotationScale(pos: TVec3, rot: TQuat, scalar: number = 1) {
-		const rotation = toMatrix(rot);
-		const mat3 = scalar === 1
-			? rotation
-			// TODO "identity-like multiplier", ignore 0 elements
-			: matrixMultiply3([
-				scalar, 0, 0,
-				0, scalar, 0,
-				0, 0, scalar
-			], rotation);
 		const d = this.#data;
-		d[0] = mat3[0]; d[1] = mat3[1]; d[2] = mat3[2]; d[3] = pos[0];
-		d[4] = mat3[3]; d[5] = mat3[4]; d[6] = mat3[5]; d[7] = pos[1];
-		d[8] = mat3[6]; d[9] = mat3[7]; d[10] = mat3[8]; d[11] = pos[2];
+		const [q0, q1, q2, q3] = rot;
+		const q0q1 = 2 * q0 * q1;
+		const q0q2 = 2 * q0 * q2;
+		const q0q3 = 2 * q0 * q3;
+		const q1q1 = 2 * q1 * q1;
+		const q1q2 = 2 * q1 * q2;
+		const q1q3 = 2 * q1 * q3;
+		const q2q2 = 2 * q2 * q2;
+		const q2q3 = 2 * q2 * q3;
+		const q3q3 = 2 * q3 * q3;
+		// 3x3 scaled rotation with seperate translation
+		d[0] = scalar * (1 - q2q2 - q3q3); // x scale
+		d[1] = scalar * (q1q2 - q0q3); // y scale
+		d[2] = scalar * (q1q3 + q0q2); // z scale
+		d[3] = pos[0];
+		d[4] = scalar * (q1q2 + q0q3);
+		d[5] = scalar * (1 - q1q1 - q3q3);
+		d[6] = scalar * (q2q3 - q0q1);
+		d[7] = pos[1];
+		d[8] = scalar * (q1q3 - q0q2);
+		d[9] = scalar * (q2q3 + q0q1);
+		d[10] = scalar * (1 - q1q1 - q2q2);
+		d[11] = pos[2];
 		d[12] = 0; d[13] = 0; d[14] = 0; d[15] = 1;
 	}
 
-	// TODO Skew support
+	// TODO Skew support?
 }
