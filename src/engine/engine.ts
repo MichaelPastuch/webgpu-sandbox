@@ -1,6 +1,7 @@
 import { DEG_TO_RAD, HALF_PI, TWO_PI } from "../constants";
 import { Graphics } from "../graphics/graphics";
 import type { IGpu } from "../interface";
+import { OrbitLight } from "../lights/orbitLight";
 import { Time, TimeManager } from "../time";
 import { add, clamp, mul, normalize, RollingAverage, wrap, type TVec3 } from "../utils";
 import { widget, widgetBox } from "./debug";
@@ -68,14 +69,12 @@ export class Engine {
 
 	// TODO Support "halting" render & sim via key press or page event
 	public run() {
-		// TODO Move into light class and control animation
 		// Orbit light around scene
-		const lightOriginX = 0;
-		const lightOriginY = 1;
-		const lightOriginZ = 3;
-		const lightVelocity = 1;
-		const lightDistance = 2;
-		let lightAngle = 0;
+		const orbitLight = new OrbitLight(
+			this.graphics.light,
+			0, 1, 3,
+			1, 2, 0
+		);
 
 		// TODO Move into player controlled camera class
 		// Track camera focus
@@ -104,13 +103,12 @@ export class Engine {
 			this.engineDeltaAvg.update(TimeManager.engineDelta);
 
 			// Advance physics
+			orbitLight.update();
 
 			// Apply velocity from previous "tick"
 			position = add(position, mul(velocity, Time.engineScale));
 			yaw = wrapRadians(yaw, vYaw * Time.engineScale);
 			pitch = clampRadians(pitch, vPitch * Time.engineScale);
-
-			lightAngle = wrapRadians(lightAngle, lightVelocity * Time.engineScale);
 
 			// Mouse pitch/yaw control
 			vYaw = Input.readX * -ORBIT_VELOCITY;
@@ -177,13 +175,7 @@ export class Engine {
 			this.graphics.camera.updateViewOrbital(fFocus, distance, fPitch, fYaw);
 			this.graphics.camera.writeBuffer();
 
-			// Orbit light
-			const fLightAngle = wrapRadians(lightAngle, lightVelocity * Time.frameScale);
-			const fLightX = lightOriginX + lightDistance * Math.cos(fLightAngle);
-			const fLightZ = lightOriginZ + lightDistance * Math.sin(fLightAngle);
-			this.graphics.light
-				.position(fLightX, lightOriginY, fLightZ)
-				.writeBuffer();
+			orbitLight.writeFrame();
 
 			// Draw results
 			this.graphics.render();
