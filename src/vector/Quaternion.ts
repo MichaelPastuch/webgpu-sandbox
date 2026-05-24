@@ -25,7 +25,7 @@ export class Quaternion {
 	}
 
 	inverse(quat: Quaternion) {
-		this.#data[0] = -quat.#data[0];
+		this.#data[0] = quat.#data[0];
 		this.#data[1] = -quat.#data[1];
 		this.#data[2] = -quat.#data[2];
 		this.#data[3] = -quat.#data[3];
