@@ -1,9 +1,11 @@
-import { DEG_TO_RAD, HALF_PI, TWO_PI } from "../constants";
+import { DEG_TO_RAD, HALF_PI } from "../constants";
 import { Graphics } from "../graphics/graphics";
+import { UserCamera } from "../graphics/userCamera";
 import type { IGpu } from "../interface";
 import { OrbitLight } from "../lights/orbitLight";
 import { Time, TimeManager } from "../time";
-import { add, clamp, mul, normalize, RollingAverage, wrap, type TVec3 } from "../utils";
+import { RollingAverage } from "../utils";
+import { Vector3 } from "../vector/vector3";
 import { widget, widgetBox } from "./debug";
 import { Input } from "./input";
 
@@ -76,25 +78,14 @@ export class Engine {
 			1, 2, 0
 		);
 
-		// TODO Move into player controlled camera class
-		// Track camera focus
-		let position: TVec3 = [0, 0, 0];
-		let pitch = HALF_PI * 0.9;
-		let yaw = -HALF_PI * 0.9;
-		const distance = 5;
-
-		// Track camera velocity
-		const MOVE_VELOCITY = 3;
-		const ORBIT_VELOCITY = Math.PI * 0.1;
-		let vPitch = 0;
-		let vYaw = 0;
-		let velocity: TVec3 = [0, 0, 0];
-
-		const wrapRadians = wrap(0, TWO_PI);
-		const clampRadians = clamp(Number.EPSILON, Math.PI - Number.EPSILON);
+		const userCamera = new UserCamera(
+			this.graphics.camera,
+			0, 0, 0,
+			HALF_PI * 0.9, -HALF_PI * 0.9, 5
+		);
 
 		// Establish render loop
-		// Simulation rate should ideally not be 
+		// Simulation rate should not exceed min delay setInterval supports
 		const SIM_RATE = 30;
 		const SIM_DURATION = 1000 / SIM_RATE;
 
@@ -104,58 +95,10 @@ export class Engine {
 
 			// Advance physics
 			orbitLight.update();
-
-			// Apply velocity from previous "tick"
-			position = add(position, mul(velocity, Time.engineScale));
-			yaw = wrapRadians(yaw, vYaw * Time.engineScale);
-			pitch = clampRadians(pitch, vPitch * Time.engineScale);
-
-			// Mouse pitch/yaw control
-			vYaw = Input.readX * -ORBIT_VELOCITY;
-			vPitch = Input.readY * ORBIT_VELOCITY;
-
-			// const btns = Input.buttons;
-
-			// Handle input
-			let tForward = 0;
-			let tRight = 0;
-			let tUp = 0;
-			const keys = Input.keys;
-			if (keys.has("w")) {
-				tForward += 1;
-			}
-			if (keys.has("s")) {
-				tForward -= 1;
-			}
-			if (keys.has("d")) {
-				tRight += 1;
-			}
-			if (keys.has("a")) {
-				tRight -= 1;
-			}
-			if (keys.has(" ")) {
-				tUp += 1;
-			}
-			if (keys.has("Control")) {
-				tUp -= 1;
-			}
-
-			// Assemble velocity from user input directions
-			if (tForward !== 0 || tRight !== 0 || tUp !== 0) {
-				const fwd = this.graphics.camera.forward;
-				const rgt = this.graphics.camera.right;
-				const direction = normalize([
-					fwd[0] * tForward + rgt[0] * tRight,
-					tUp,
-					fwd[2] * tForward + rgt[2] * tRight
-				]);
-				velocity = mul(direction, MOVE_VELOCITY);
-			} else {
-				velocity = [0, 0, 0];
-			}
+			userCamera.update();
 
 			// Enter fullscreen
-			if (keys.has("Enter") && document.fullscreenElement == null) {
+			if (Input.keys.has("Enter") && document.fullscreenElement == null) {
 				this.canvas.requestFullscreen();
 			}
 		}
@@ -165,17 +108,9 @@ export class Engine {
 			TimeManager.frameUpdate = time;
 			this.frameScaleAvg.update(Time.frameScale);
 
-			// Assume camera changes on every frame
-			// Extrapolate camera movement
-			const fFocus = add(position, mul(velocity, Time.frameScale));
-			const fPitch = clampRadians(pitch, vPitch * Time.frameScale);
-			const fYaw = wrapRadians(yaw, vYaw * Time.frameScale);
-
-			// Use new positions for frame
-			this.graphics.camera.updateViewOrbital(fFocus, distance, fPitch, fYaw);
-			this.graphics.camera.writeBuffer();
-
+			// Extrapolate physics for frame
 			orbitLight.writeFrame();
+			userCamera.writeFrame();
 
 			// Draw results
 			this.graphics.render();
@@ -193,7 +128,10 @@ export class Engine {
 
 	/** 1 frame render, useful for debugging shaders */
 	public render() {
-		this.graphics.camera.updateViewOrbital([0, 0, 0], 5, HALF_PI, -HALF_PI);
+
+		this.graphics.camera.updateViewOrbital(
+			Vector3.unmapped(), 5, HALF_PI, -HALF_PI
+		);
 		this.graphics.camera.writeBuffer();
 		this.graphics.render();
 	}

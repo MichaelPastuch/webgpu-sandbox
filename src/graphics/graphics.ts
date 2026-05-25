@@ -1,4 +1,3 @@
-import { Camera } from "../camera";
 import { DEG_TO_RAD, HALF_PI } from "../constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "../interface";
 import { Light } from "../lights/light";
@@ -6,7 +5,7 @@ import { Circle } from "../models/circle";
 import type { Model } from "../models/model";
 import { Rectangle } from "../models/rectangle";
 import { Triangle } from "../models/trangle";
-import type { TVec3 } from "../utils";
+import { Camera } from "./camera";
 import shaders from "./shaders.wgsl";
 
 export class Graphics {
@@ -42,7 +41,7 @@ export class Graphics {
 	// private gBufferColor!: IGpuTexture;
 
 	private readonly ambientBuffer: IGpuBuffer;
-	private ambientColor: TVec3 = [0, 0, 0];
+	private ambientColor: [number, number, number] = [0, 0, 0];
 
 	public readonly camera: Camera;
 

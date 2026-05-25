@@ -1,7 +1,5 @@
 import { TWO_PI } from "./constants";
 
-export type TVec3 = [number, number, number];
-
 /** Return function that applies a delta to a given value, wrapping a given range */
 export function wrap(min: number, max: number) {
 	return function (value: number, delta: number) {
@@ -44,25 +42,6 @@ export function clamp(min: number, max: number) {
 			return newValue;
 		}
 	}
-}
-
-/** Create vector combining lhs and rhs */
-export function add(lhs: TVec3, rhs: TVec3): TVec3 {
-	return [lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]];
-}
-
-export function mul(vec: TVec3, mul: number): TVec3 {
-	return [vec[0] * mul, vec[1] * mul, vec[2] * mul];
-}
-
-/** Vector length */
-export function magnitude(vec: TVec3) {
-	return Math.sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
-}
-
-export function normalize(vec: TVec3): TVec3 {
-	const mag = magnitude(vec);
-	return [vec[0] / mag, vec[1] / mag, vec[2] / mag];
 }
 
 export class RollingAverage {

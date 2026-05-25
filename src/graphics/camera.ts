@@ -1,7 +1,6 @@
-import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "./interface";
-import { Matrix4 } from "./matrix/matrix4";
-import { type TVec3 } from "./utils";
-import { Vector3 } from "./vector/vector3";
+import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "../interface";
+import { Matrix4 } from "../matrix/matrix4";
+import { Vector3 } from "../vector/vector3";
 
 // WebGPU -> x and y range from -1 to +1, z ranges from 0 to 1
 // Any values outside of this range are clipped
@@ -31,14 +30,14 @@ export class Camera {
 	#right = Vector3.unmapped();
 	#up = Vector3.unmapped();
 
-	get direction(): TVec3 {
+	get direction() {
 		return this.#direction._;
 	}
-	get right(): TVec3 {
+	get right() {
 		return this.#right._;
 	}
 	/** x/z components of direction only */
-	get forward(): TVec3 {
+	get forward(): [number, number, number] {
 		const d = this.direction;
 		const mag = Math.sqrt(d[0] * d[0] + d[2] * d[2]);
 		return [d[0] / mag, 0, d[2] / mag];
@@ -103,14 +102,15 @@ export class Camera {
 		);
 	}
 
-	public updateViewOrbital(focus: TVec3, distance: number, pitch: number, yaw: number) {
+	public updateViewOrbital(focus: Vector3, distance: number, pitch: number, yaw: number) {
 		// Use angles to position camera on sphere about origin
 		const sinPitch = Math.sin(pitch);
 		const orbitX = distance * sinPitch * Math.cos(yaw);
 		const orbitY = distance * Math.cos(pitch);
 		const orbitZ = distance * sinPitch * Math.sin(yaw);
+		const pos = focus._;
 		this.updateViewDirection(
-			focus[0] + orbitX, focus[1] + orbitY, focus[2] + orbitZ,
+			pos[0] + orbitX, pos[1] + orbitY, pos[2] + orbitZ,
 			-orbitX, -orbitY, -orbitZ
 		);
 	}
