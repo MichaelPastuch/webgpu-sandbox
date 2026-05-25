@@ -64,14 +64,16 @@ export class UserCamera {
 		}
 
 		this.velocity.set(0, 0, 0);
-		if (tForward !== 0 || tRight !== 0 || tUp !== 0) {
+		if (tForward | tRight | tUp) {
 			// Restrict "forward" movement to x/z plane
-			const fwd = this.camera.forward;
+			const dir = this.camera.direction;
+			const mag = Math.sqrt(dir[0] * dir[0] + dir[2] * dir[2]);
+			// Right already has a zero y component
 			const rgt = this.camera.right;
 			this.direction.set(
-				fwd[0] * tForward + rgt[0] * tRight,
+				dir[0] / mag * tForward + rgt[0] * tRight,
 				tUp,
-				fwd[2] * tForward + rgt[2] * tRight
+				dir[2] / mag * tForward + rgt[2] * tRight
 			);
 			this.direction.normalize();
 			this.velocity.addScaled(this.direction, UserCamera.MOVE_VELOCITY);
@@ -90,6 +92,5 @@ export class UserCamera {
 		// Use new positions for frame
 		this.camera.updateViewOrbital(this.frameFocus, this.distance, framePitch, frameYaw);
 		this.camera.writeBuffer();
-
 	}
 }

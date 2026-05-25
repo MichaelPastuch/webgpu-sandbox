@@ -36,12 +36,6 @@ export class Camera {
 	get right() {
 		return this.#right._;
 	}
-	/** x/z components of direction only */
-	get forward(): [number, number, number] {
-		const d = this.direction;
-		const mag = Math.sqrt(d[0] * d[0] + d[2] * d[2]);
-		return [d[0] / mag, 0, d[2] / mag];
-	}
 
 	// TODO consider a camera buffer with inverse projection matrix, camera position, and camera direction for fragment shader only, bind viewBuffer only for vertex shader?
 	// Camera properties
