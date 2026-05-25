@@ -5,6 +5,7 @@ import { Circle } from "../models/circle";
 import type { Model } from "../models/model";
 import { Rectangle } from "../models/rectangle";
 import { Triangle } from "../models/trangle";
+import { Vector3 } from "../vector/vector3";
 import { Camera } from "./camera";
 import shaders from "./shaders.wgsl";
 
@@ -40,8 +41,10 @@ export class Graphics {
 	// private gBufferNormal!: IGpuTexture;
 	// private gBufferColor!: IGpuTexture;
 
-	private readonly ambientBuffer: IGpuBuffer;
-	private ambientColor: [number, number, number] = [0, 0, 0];
+	readonly #ambientBuffer: IGpuBuffer;
+	readonly #ambientData = new ArrayBuffer(Vector3.byteLength);
+	readonly #amblentColor = new Vector3(this.#ambientData, 0);
+	readonly #clearColor: [number, number, number, number] = [0, 0, 0, 1];
 
 	public readonly camera: Camera;
 
@@ -76,9 +79,9 @@ export class Graphics {
 		});
 
 		// Assemble ambient colour buffer
-		this.ambientBuffer = this.device.createBuffer({
+		this.#ambientBuffer = this.device.createBuffer({
 			// rgb
-			size: 3 * Float32Array.BYTES_PER_ELEMENT,
+			size: this.#ambientData.byteLength,
 			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
 		});
 
@@ -94,7 +97,7 @@ export class Graphics {
 			layout: globalBindGroupLayout,
 			entries: [{
 				binding: 0,
-				resource: { buffer: this.ambientBuffer }
+				resource: { buffer: this.#ambientBuffer }
 			}]
 		});
 
@@ -248,25 +251,26 @@ export class Graphics {
 	}
 
 	public setAmbientColor(red: number, green: number, blue: number) {
-		this.ambientColor = [red, green, blue];
+		this.#amblentColor.set(red, green, blue);
+		this.device.queue.writeBuffer(
+			this.#ambientBuffer, 0,
+			this.#ambientData, 0, this.#ambientData.byteLength
+		);
+		// Sync clear value with ambient
+		this.#clearColor[0] = red;
+		this.#clearColor[1] = green;
+		this.#clearColor[2] = blue;
 	}
 
 	// TODO Scenegraph system
 	public render() {
-		// Assume ambient colour may have changed each frame
-		const ambientCols = new Float32Array(this.ambientColor);
-		this.device.queue.writeBuffer(
-			this.ambientBuffer, 0,
-			ambientCols, 0, ambientCols.length
-		);
-
 		// Assemble GPU work batch
 		const commandEncoder = this.device.createCommandEncoder();
 
 		// Prepare render pass - clear canvas and draw triangle to it
 		const passEncoder = commandEncoder.beginRenderPass({
 			colorAttachments: [{
-				clearValue: [...this.ambientColor, 1],
+				clearValue: this.#clearColor,
 				loadOp: "clear",
 				storeOp: "store",
 				view: this.context.getCurrentTexture().createView()
