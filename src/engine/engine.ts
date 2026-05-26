@@ -60,13 +60,7 @@ export class Engine {
 		});
 
 		// Initialise graphics
-		this.graphics.setAmbientColor(0.5, 0.5, 0.5);
-
-		// TODO Move into light class and control animation
-		this.graphics.light
-			.position(-1, 1, 2)
-			.color(0.9, 0.9, 0.8)
-			.writeBuffer();
+		this.graphics.setAmbientColor(0.15, 0.15, 0.15);
 	}
 
 	// TODO Support "halting" render & sim via key press or page event
@@ -74,15 +68,15 @@ export class Engine {
 		// Orbit light around scene
 		const orbitLight = new OrbitLight(
 			this.graphics.light,
-			0, 1, 3,
-			1, 2, 0
+			0, 0, 3,
+			1, 3, 0
 		);
 
 		// Move camera with user input
 		const userCamera = new UserCamera(
 			this.graphics.camera,
-			0, 0, 0,
-			HALF_PI * 0.9, -HALF_PI * 0.9, 5
+			1, 0.5, 1,
+			HALF_PI * 0.9, -HALF_PI * 0.8, 5
 		);
 
 		// Update sim
@@ -143,7 +137,7 @@ export class Engine {
 		}));
 
 		// Enable ambient light control
-		let brightness = 50;
+		let brightness = 15;
 		let redMul = 100;
 		let greenMul = 100;
 		let blueMul = 100;

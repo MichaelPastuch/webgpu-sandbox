@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		throw Error("Unable to mount application to #main");
 	}
 
-	const DEBUG = false;
+	const DEBUG = true;
 	const WIDTH = 1024;
 	const HEIGHT = 768;
 

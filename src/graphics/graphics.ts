@@ -2,6 +2,7 @@ import { DEG_TO_RAD, HALF_PI } from "../constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "../interface";
 import { Light } from "../lights/light";
 import { Circle } from "../models/circle";
+import { Cube } from "../models/cube";
 import type { Model } from "../models/model";
 import { Rectangle } from "../models/rectangle";
 import { Triangle } from "../models/trangle";
@@ -178,6 +179,29 @@ export class Graphics {
 
 		// TODO Function to create models for cuboid, sphere, etc.
 		this.models = [
+			// Initial cube
+			new Cube(this.device, modelBindGroupLayout, {
+				width: 1,
+				colors: "cm"
+			})
+				.translate(-1, -1, 3)
+				.rotate(0, -Math.PI * 0.25)
+				.writeBuffer(),
+			// "Hat"
+			new Cube(this.device, modelBindGroupLayout, {
+				width: 0.5,
+				colors: "y0"
+			})
+				.translate(-1, -0.25, 3)
+				.writeBuffer(),
+			// "Accomplice"
+			new Cube(this.device, modelBindGroupLayout, {
+				width: 1.5,
+				colors: "ry1"
+			})
+				.translate(3, -1, 6)
+				.rotate(Math.PI * 0.25, Math.PI * 0.375)
+				.writeBuffer(),
 			// Create rectangle
 			new Rectangle(this.device, modelBindGroupLayout, {
 				width: 6
