@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		throw Error("Unable to mount application to #main");
 	}
 
+	const DEBUG = false;
 	const WIDTH = 1024;
 	const HEIGHT = 768;
 
@@ -19,31 +20,32 @@ document.addEventListener("DOMContentLoaded", () => {
 	if ("gpu" in navigator) {
 		Engine.create(canvas, navigator.gpu as IGpu)
 			.then((engine) => {
-				// engine.render();
-
-				const debug = document.createElement("section")
-				main.append(debug);
-				m.mount(debug, {
-					view: () => m("div", {
-						style: {
-							display: "flex",
-							gap: "0.5rem"
-						}
-					}, [
-						m("div", [
-							m("pre", "Engine Delta Avg."),
-							m("pre", engine.averageDelta)
-						]),
-						m("div", [
-							m("pre", "Frame Scale"),
-							m("pre", engine.averageFrameScale)
+				if (DEBUG) {
+					const debug = document.createElement("section")
+					main.append(debug);
+					m.mount(debug, {
+						view: () => m("div", {
+							style: {
+								display: "flex",
+								gap: "0.5rem"
+							}
+						}, [
+							m("div", [
+								m("pre", "Engine Delta Avg."),
+								m("pre", engine.averageDelta)
+							]),
+							m("div", [
+								m("pre", "Frame Scale"),
+								m("pre", engine.averageFrameScale)
+							])
 						])
-					])
-				});
-				setInterval(m.redraw, 1000);
-				// TODO Convert debug controls into mithril components, submit changes to engine
-				engine.debugControls(debug);
+					});
+					setInterval(m.redraw, 1000);
+					// TODO Convert debug controls into mithril components, submit changes to engine
+					engine.debugControls(debug);
+				}
 
+				// engine.render();
 				engine.run();
 			});
 	} else {

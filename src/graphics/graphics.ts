@@ -306,10 +306,10 @@ export class Graphics {
 		passEncoder.setBindGroup(3, this.light.bindGroup);
 
 		// Draw models
-		this.models.forEach((model) => {
+		for (const model of this.models) {
 			passEncoder.setBindGroup(2, model.bindGroup);
 			model.draw(passEncoder);
-		});
+		}
 
 		// Complete render pass
 		passEncoder.end();
