@@ -50,7 +50,7 @@ export abstract class Model {
 	}
 
 	public writeBuffer() {
-		this.#modelMatrix.postitionRotationScale(
+		this.#modelMatrix.positionRotationScale(
 			this.translation,
 			this.rotation,
 			this.scalar

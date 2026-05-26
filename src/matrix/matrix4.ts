@@ -112,7 +112,7 @@ export class Matrix4 {
 		d[12] = 0; d[13] = 0; d[14] = 0; d[15] = 1;
 	}
 
-	postitionRotationScale(position: Vector3, rotation: Quaternion, scalar: number = 1) {
+	positionRotationScale(position: Vector3, rotation: Quaternion, scalar: number = 1) {
 		const d = this.#data;
 		const pos = position._;
 		const q = rotation._;
@@ -125,7 +125,7 @@ export class Matrix4 {
 		const q2q2 = 2 * q[2] * q[2];
 		const q2q3 = 2 * q[2] * q[3];
 		const q3q3 = 2 * q[3] * q[3];
-		// 3x3 scaled rotation with seperate translation
+		// 3x3 scaled rotation with translation
 		d[0] = scalar * (1 - q2q2 - q3q3); // x scale
 		d[1] = scalar * (q1q2 - q0q3); // y scale
 		d[2] = scalar * (q1q3 + q0q2); // z scale
