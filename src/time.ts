@@ -2,6 +2,10 @@
 /** For engine use only */
 export abstract class TimeManager {
 
+	// Simulation rate should not exceed min delay setInterval supports
+	static readonly SIM_RATE = 30;
+	static readonly SIM_DURATION = 1000 / this.SIM_RATE;
+
 	static engineTime: number = 0;
 	static engineDelta: number = 0;
 	static engineScale: number = 0;

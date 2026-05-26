@@ -78,17 +78,14 @@ export class Engine {
 			1, 2, 0
 		);
 
+		// Move camera with user input
 		const userCamera = new UserCamera(
 			this.graphics.camera,
 			0, 0, 0,
 			HALF_PI * 0.9, -HALF_PI * 0.9, 5
 		);
 
-		// Establish render loop
-		// Simulation rate should not exceed min delay setInterval supports
-		const SIM_RATE = 30;
-		const SIM_DURATION = 1000 / SIM_RATE;
-
+		// Update sim
 		const tick = () => {
 			TimeManager.engineUpdate = performance.now();
 			this.engineDeltaAvg.update(TimeManager.engineDelta);
@@ -103,7 +100,7 @@ export class Engine {
 			}
 		}
 
-		// Render frames
+		// Render frame
 		const frame = (time: number) => {
 			TimeManager.frameUpdate = time;
 			this.frameScaleAvg.update(Time.frameScale);
@@ -120,7 +117,7 @@ export class Engine {
 		}
 
 		// Start sim loop
-		setInterval(tick, SIM_DURATION);
+		setInterval(tick, TimeManager.SIM_DURATION);
 		TimeManager.engineUpdate = performance.now();
 		// Start render loop
 		requestAnimationFrame(frame);
@@ -128,7 +125,6 @@ export class Engine {
 
 	/** 1 frame render, useful for debugging shaders */
 	public render() {
-
 		this.graphics.camera.updateViewOrbital(
 			Vector3.unmapped(), 5, HALF_PI, -HALF_PI
 		);
