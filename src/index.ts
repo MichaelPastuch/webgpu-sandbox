@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				});
 				setInterval(m.redraw, 1000);
 				// TODO Convert debug controls into mithril components, submit changes to engine
-				engine.debugControls(main);
+				engine.debugControls(debug);
 
 				engine.run();
 			});
