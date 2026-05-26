@@ -25,6 +25,12 @@ export class Vector3 {
 		return this.#data;
 	}
 
+	/** All components have zero set */
+	get isZero() {
+		const d = this.#data;
+		return (d[0] | d[1] | d[2]) === 0;
+	}
+
 	get magnitude() {
 		const d = this.#data;
 		return Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);

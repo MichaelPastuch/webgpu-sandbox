@@ -1,4 +1,4 @@
-import { Input } from "../engine/input";
+import { Input, Keybind } from "../engine/input";
 import { Time } from "../time";
 import { clamp, wrapRadians } from "../utils";
 import { Vector3 } from "../vector/vector3";
@@ -13,6 +13,9 @@ export class UserCamera {
 
 	private readonly focus = Vector3.unmapped();
 	private readonly frameFocus = Vector3.unmapped();
+
+	// Track user move direction
+	private readonly input = Vector3.unmapped();
 
 	// Track velocity
 	private readonly velocity = Vector3.unmapped();
@@ -34,46 +37,31 @@ export class UserCamera {
 		this.pitch = UserCamera.clampPitch(this.pitch, this.pitchVelocity * Time.engineScale);
 		this.yaw = wrapRadians(this.yaw, this.yawVelocity * Time.engineScale);
 
-		// Mouse pitch/yaw control
+		// Mouse pitch/yaw
 		this.pitchVelocity = Input.readY * UserCamera.ORBIT_VELOCITY;
 		this.yawVelocity = Input.readX * -UserCamera.ORBIT_VELOCITY;
 
-		// TODO Move to UserInput class - Snapshot mapped keys as joysticks/buttons on a controller
-		// Handle input
-		let tForward = 0;
-		let tRight = 0;
-		let tUp = 0;
-		const keys = Input.keys;
-		if (keys.has("w")) {
-			tForward += 1;
-		}
-		if (keys.has("s")) {
-			tForward -= 1;
-		}
-		if (keys.has("d")) {
-			tRight += 1;
-		}
-		if (keys.has("a")) {
-			tRight -= 1;
-		}
-		if (keys.has(" ")) {
-			tUp += 1;
-		}
-		if (keys.has("Control")) {
-			tUp -= 1;
-		}
+		// Keyboard velocity
+		this.input.set(
+			Input.key(Keybind.UP) - Input.key(Keybind.DOWN),
+			// y-axis should not normally require direct user input
+			Input.key(Keybind.FACE_DOWN) - Input.key(Keybind.FACE_RIGHT),
+			Input.key(Keybind.RIGHT) - Input.key(Keybind.LEFT)
+		);
 
 		this.velocity.set(0, 0, 0);
-		if (tForward | tRight | tUp) {
+		if (!this.input.isZero) {
+			this.input.normalize();
+			const user = this.input._;
 			// Restrict "forward" movement to x/z plane
 			const dir = this.camera.direction;
-			const mag = Math.sqrt(dir[0] * dir[0] + dir[2] * dir[2]);
-			// Right already has a zero y component
+			const dirMag = Math.sqrt(dir[0] * dir[0] + dir[2] * dir[2]);
+			// Assume right already has a zero y component
 			const rgt = this.camera.right;
 			this.direction.set(
-				dir[0] / mag * tForward + rgt[0] * tRight,
-				tUp,
-				dir[2] / mag * tForward + rgt[2] * tRight
+				dir[0] / dirMag * user[0] + rgt[0] * user[2],
+				user[1],
+				dir[2] / dirMag * user[0] + rgt[2] * user[2]
 			);
 			this.direction.normalize();
 			this.velocity.addScaled(this.direction, UserCamera.MOVE_VELOCITY);
@@ -85,12 +73,11 @@ export class UserCamera {
 		const focus = this.focus._;
 		this.frameFocus.set(focus[0], focus[1], focus[2]);
 		this.frameFocus.addScaled(this.velocity, Time.frameScale);
-
-		const framePitch = UserCamera.clampPitch(this.pitch, this.pitchVelocity * Time.frameScale);
-		const frameYaw = wrapRadians(this.yaw, this.yawVelocity * Time.frameScale);
-
 		// Use new positions for frame
-		this.camera.updateViewOrbital(this.frameFocus, this.distance, framePitch, frameYaw);
+		this.camera.updateViewOrbital(
+			this.frameFocus, this.distance,
+			UserCamera.clampPitch(this.pitch, this.pitchVelocity * Time.frameScale),
+			wrapRadians(this.yaw, this.yawVelocity * Time.frameScale));
 		this.camera.writeBuffer();
 	}
 }

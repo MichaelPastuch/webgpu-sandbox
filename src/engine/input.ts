@@ -1,15 +1,60 @@
 
+export const enum Keybind {
+	// D-pad
+	UP = "KeyW",
+	DOWN = "KeyS",
+	LEFT = "KeyA",
+	RIGHT = "KeyD",
+	// Face button
+	FACE_UP = "KeyE",
+	FACE_DOWN = "Space",
+	FACE_LEFT = "KeyQ",
+	FACE_RIGHT = "ControlLeft",
+	// Shoulder
+	LEFT_BUMPER = "ShiftLeft",
+	RIGHT_BUMPER = "KeyC",
+	// Function
+	FULLSCREEN = "Enter"
+}
+
+export const enum Mouse {
+	LEFT_CLICK = 0,
+	RIGHT_CLICK = 2
+}
+
 export class Input {
 
 	static readonly LEFT_CLICK = 0;
 	static readonly RIGHT_CLICK = 2;
 
-	private static readonly keyTracker = new Set<string>();
+	private static readonly keyTracker: Record<Keybind, 0 | 1> = {
+		[Keybind.UP]: 0,
+		[Keybind.DOWN]: 0,
+		[Keybind.LEFT]: 0,
+		[Keybind.RIGHT]: 0,
+		[Keybind.FACE_UP]: 0,
+		[Keybind.FACE_DOWN]: 0,
+		[Keybind.FACE_LEFT]: 0,
+		[Keybind.FACE_RIGHT]: 0,
+		[Keybind.LEFT_BUMPER]: 0,
+		[Keybind.RIGHT_BUMPER]: 0,
+		[Keybind.FULLSCREEN]: 0
+	}
+
+	private static readonly mouseTracker: Record<Mouse, 0 | 1> = {
+		[Mouse.LEFT_CLICK]: 0,
+		[Mouse.RIGHT_CLICK]: 1
+	}
+
 	private static keyDown(event: KeyboardEvent) {
-		Input.keyTracker.add(event.key);
+		if (event.code in Input.keyTracker) {
+			Input.keyTracker[event.code as Keybind] = 1;
+		}
 	}
 	private static keyUp(event: KeyboardEvent) {
-		Input.keyTracker.delete(event.key);
+		if (event.code in Input.keyTracker) {
+			Input.keyTracker[event.code as Keybind] = 0;
+		}
 	}
 
 	private static mouseX = 0;
@@ -19,36 +64,56 @@ export class Input {
 		Input.mouseY += event.movementY;
 	}
 
-	private static readonly buttonTracker = new Set<number>();
 	private static mouseDown(event: MouseEvent) {
-		Input.buttonTracker.add(event.button);
+		// MacOS Note: ctrl + LEFT_CLICK = RIGHT_CLICK
+		if (event.button in Input.mouseTracker) {
+			Input.mouseTracker[event.button as Mouse] = 1;
+		}
 	}
 	private static mouseUp(event: MouseEvent) {
-		Input.buttonTracker.delete(event.button);
+		if (event.button in Input.mouseTracker) {
+			Input.mouseTracker[event.button as Mouse] = 0;
+		}
 	}
 
 	public static enable() {
-		document.addEventListener("keydown", Input.keyDown, false);
-		document.addEventListener("keyup", Input.keyUp, false);
-		document.addEventListener("mousemove", Input.trackMovement, false);
-		document.addEventListener("mousedown", Input.mouseDown, false);
-		document.addEventListener("mouseup", Input.mouseUp, false);
+		document.addEventListener("keydown", Input.keyDown);
+		document.addEventListener("keyup", Input.keyUp);
+		document.addEventListener("mousemove", Input.trackMovement);
+		document.addEventListener("mousedown", Input.mouseDown);
+		document.addEventListener("mouseup", Input.mouseUp);
 	}
 
 	public static disable() {
-		document.removeEventListener("keydown", Input.keyDown, false);
-		document.removeEventListener("keyup", Input.keyUp, false);
-		document.removeEventListener("mousemove", Input.trackMovement, false);
-		document.removeEventListener("mousedown", Input.mouseDown, false);
-		document.removeEventListener("mouseup", Input.mouseUp, false);
+		document.removeEventListener("keydown", Input.keyDown);
+		document.removeEventListener("keyup", Input.keyUp);
+		document.removeEventListener("mousemove", Input.trackMovement);
+		document.removeEventListener("mousedown", Input.mouseDown);
+		document.removeEventListener("mouseup", Input.mouseUp);
 		// "Unset" all mouse/keyboard tracking
-		Input.keyTracker.clear();
-		Input.buttonTracker.clear();
+		Input.keyTracker[Keybind.UP] = 0;
+		Input.keyTracker[Keybind.DOWN] = 0;
+		Input.keyTracker[Keybind.LEFT] = 0;
+		Input.keyTracker[Keybind.RIGHT] = 0;
+		Input.keyTracker[Keybind.FACE_UP] = 0;
+		Input.keyTracker[Keybind.FACE_DOWN] = 0;
+		Input.keyTracker[Keybind.FACE_LEFT] = 0;
+		Input.keyTracker[Keybind.FACE_RIGHT] = 0;
+		Input.keyTracker[Keybind.LEFT_BUMPER] = 0;
+		Input.keyTracker[Keybind.RIGHT_BUMPER] = 0;
+		Input.keyTracker[Keybind.FULLSCREEN] = 0;
+		Input.mouseTracker[Mouse.LEFT_CLICK] = 0;
+		Input.mouseTracker[Mouse.RIGHT_CLICK] = 0;
 	}
 
-	/** Get set of held keys */
-	public static get keys(): ReadonlySet<string> {
-		return Input.keyTracker;
+	/** Get key hold value */
+	public static key(key: Keybind) {
+		return Input.keyTracker[key];
+	}
+
+	/** Get mouse hold value */
+	public static mouse(key: Mouse) {
+		return Input.mouseTracker[key];
 	}
 
 	/** Read accumulated mouse x movement and reset */
@@ -63,11 +128,6 @@ export class Input {
 		const readY = Input.mouseY;
 		Input.mouseY = 0;
 		return readY;
-	}
-
-	/** Get set of held buttons */
-	public static get buttons(): ReadonlySet<number> {
-		return Input.buttonTracker;
 	}
 
 }

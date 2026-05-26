@@ -7,7 +7,7 @@ import { Time, TimeManager } from "../time";
 import { RollingAverage } from "../utils";
 import { Vector3 } from "../vector/vector3";
 import { widget, widgetBox } from "./debug";
-import { Input } from "./input";
+import { Input, Keybind } from "./input";
 
 export class Engine {
 
@@ -95,7 +95,7 @@ export class Engine {
 			userCamera.update();
 
 			// Enter fullscreen
-			if (Input.keys.has("Enter") && document.fullscreenElement == null) {
+			if (Input.key(Keybind.FULLSCREEN) && document.fullscreenElement == null) {
 				this.canvas.requestFullscreen();
 			}
 		}
