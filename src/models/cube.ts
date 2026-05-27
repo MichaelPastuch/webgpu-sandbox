@@ -9,48 +9,6 @@ interface ICubeConfig {
 	readonly colors?: string;
 }
 
-type TPoint = [number, number, number];
-type TFace = [TPoint, TPoint, TPoint, TPoint];
-
-class Box {
-
-	// Create box with opposite corners equal distance away origin
-	constructor(
-		private readonly x: number,
-		private readonly y: number,
-		private readonly z: number
-	) { }
-
-	// Four points for face where all X values are the same, anti-clockwise from "top-left"
-	get xFace(): TFace {
-		// Y is "up", z is "left"
-		return [
-			[this.x, this.y, this.z],
-			[this.x, -this.y, this.z],
-			[this.x, -this.y, -this.z],
-			[this.x, this.y, -this.z]
-		];
-	}
-	get yFace(): TFace {
-		// X is "right", z is "down"
-		return [
-			[-this.x, this.y, -this.z],
-			[-this.x, this.y, this.z],
-			[this.x, this.y, this.z],
-			[this.x, this.y, -this.z]
-		];
-	}
-	get zFace(): TFace {
-		// X is "right", Y is "up"
-		return [
-			[-this.x, this.y, this.z],
-			[-this.x, -this.y, this.z],
-			[this.x, -this.y, this.z],
-			[this.x, this.y, this.z]
-		];
-	}
-}
-
 export class Cube extends Model {
 
 	private static indices(offset: number) {
@@ -74,49 +32,42 @@ export class Cube extends Model {
 	}: ICubeConfig = {}) {
 		super(device, bindGroupLayout);
 		const cols = new Color(colors);
-
 		// Model the box as a simple pair of opposite points
-		const box = new Box(
-			0.5 * width,
-			0.5 * height,
-			0.5 * depth
-		);
-		const xF = box.xFace;
-		const yF = box.yFace;
-		const zF = box.zFace;
-
+		const x = 0.5 * width;
+		const y = 0.5 * height;
+		const z = 0.5 * depth;
 		// Assemble each cube face
 		const vertices = new Float32Array([
-			// X
-			xF[3][0], xF[3][1], xF[3][2], 1, 0, 0, ...cols.next(),
-			xF[2][0], xF[2][1], xF[2][2], 1, 0, 0, ...cols.next(),
-			xF[1][0], xF[1][1], xF[1][2], 1, 0, 0, ...cols.next(),
-			xF[0][0], xF[0][1], xF[0][2], 1, 0, 0, ...cols.next(),
-			// Y
-			yF[3][0], yF[3][1], yF[3][2], 0, 1, 0, ...cols.next(),
-			yF[2][0], yF[2][1], yF[2][2], 0, 1, 0, ...cols.next(),
-			yF[1][0], yF[1][1], yF[1][2], 0, 1, 0, ...cols.next(),
-			yF[0][0], yF[0][1], yF[0][2], 0, 1, 0, ...cols.next(),
-			// Z
-			zF[3][0], zF[3][1], zF[3][2], 0, 0, 1, ...cols.next(),
-			zF[2][0], zF[2][1], zF[2][2], 0, 0, 1, ...cols.next(),
-			zF[1][0], zF[1][1], zF[1][2], 0, 0, 1, ...cols.next(),
-			zF[0][0], zF[0][1], zF[0][2], 0, 0, 1, ...cols.next(),
-			// -X
-			-xF[0][0], xF[0][1], xF[0][2], -1, 0, 0, ...cols.next(),
-			-xF[1][0], xF[1][1], xF[1][2], -1, 0, 0, ...cols.next(),
-			-xF[2][0], xF[2][1], xF[2][2], -1, 0, 0, ...cols.next(),
-			-xF[3][0], xF[3][1], xF[3][2], -1, 0, 0, ...cols.next(),
-			// -Y
-			yF[0][0], -yF[0][1], yF[0][2], 0, -1, 0, ...cols.next(),
-			yF[1][0], -yF[1][1], yF[1][2], 0, -1, 0, ...cols.next(),
-			yF[2][0], -yF[2][1], yF[2][2], 0, -1, 0, ...cols.next(),
-			yF[3][0], -yF[3][1], yF[3][2], 0, -1, 0, ...cols.next(),
-			// -Z
-			zF[0][0], zF[0][1], -zF[0][2], 0, 0, -1, ...cols.next(),
-			zF[1][0], zF[1][1], -zF[1][2], 0, 0, -1, ...cols.next(),
-			zF[2][0], zF[2][1], -zF[2][2], 0, 0, -1, ...cols.next(),
-			zF[3][0], zF[3][1], -zF[3][2], 0, 0, -1, ...cols.next(),
+			// X: Y is "up", z is "right"
+			x, y, -z, 1, 0, 0, ...cols.next(),
+			x, -y, -z, 1, 0, 0, ...cols.next(),
+			x, -y, z, 1, 0, 0, ...cols.next(),
+			x, y, z, 1, 0, 0, ...cols.next(),
+			// Y: X is "left", z is "down"
+			x, y, -z, 0, 1, 0, ...cols.next(),
+			x, y, z, 0, 1, 0, ...cols.next(),
+			-x, y, z, 0, 1, 0, ...cols.next(),
+			-x, y, -z, 0, 1, 0, ...cols.next(),
+			// Z: X is "left", Y is "up"
+			x, y, z, 0, 0, 1, ...cols.next(),
+			x, -y, z, 0, 0, 1, ...cols.next(),
+			-x, -y, z, 0, 0, 1, ...cols.next(),
+			-x, y, z, 0, 0, 1, ...cols.next(),
+			// -X: Y is "up", z is "left"
+			-x, y, z, -1, 0, 0, ...cols.next(),
+			-x, -y, z, -1, 0, 0, ...cols.next(),
+			-x, -y, -z, -1, 0, 0, ...cols.next(),
+			-x, y, -z, -1, 0, 0, ...cols.next(),
+			// -Y: X is "right", z is "down"
+			-x, -y, -z, 0, -1, 0, ...cols.next(),
+			-x, -y, z, 0, -1, 0, ...cols.next(),
+			x, -y, z, 0, -1, 0, ...cols.next(),
+			x, -y, -z, 0, -1, 0, ...cols.next(),
+			// -Z: X is "right", Y is "up"
+			-x, y, -z, 0, 0, -1, ...cols.next(),
+			-x, -y, -z, 0, 0, -1, ...cols.next(),
+			x, -y, -z, 0, 0, -1, ...cols.next(),
+			x, y, -z, 0, 0, -1, ...cols.next(),
 		]);
 		this.vertexBuffer = this.device.createBuffer({
 			size: vertices.byteLength,
