@@ -179,6 +179,13 @@ export class Graphics {
 
 		// TODO Function to create models for cuboid, sphere, etc.
 		this.models = [
+			// "Skybox"
+			new Cube(this.device, modelBindGroupLayout, {
+				width: 1,
+				colors: "c11c"
+			})
+				.scale(-30)
+				.writeBuffer(),
 			// Initial cube
 			new Cube(this.device, modelBindGroupLayout, {
 				width: 1,
@@ -194,13 +201,14 @@ export class Graphics {
 			})
 				.translate(-1, -0.25, 3)
 				.writeBuffer(),
-			// "Accomplice"
+			// "Pillar"
 			new Cube(this.device, modelBindGroupLayout, {
-				width: 1.5,
+				width: 1,
+				depth: 3,
 				colors: "ry1"
 			})
 				.translate(3, -1, 6)
-				.rotate(Math.PI * 0.25, Math.PI * 0.375)
+				.rotate(Math.PI * 0.25, Math.PI * 0.33)
 				.writeBuffer(),
 			// Create rectangle
 			new Rectangle(this.device, modelBindGroupLayout, {
@@ -214,7 +222,7 @@ export class Graphics {
 			new Circle(device, modelBindGroupLayout, {
 				radius: 3,
 				numPoints: 16,
-				colors: "01"
+				colors: "01b"
 			})
 				.translate(-6, 2, 12)
 				.rotate(0, -Math.PI * 0.25)
