@@ -89,12 +89,29 @@ export class Matrix4 {
 		const bottom = near * perspective;
 		const right = near * aspectRatio * perspective;
 		const zScale = -1 / (near - far);
+		const farScale = far * zScale;
 		// Use w to "divide" everything by z, therefore z component needs to be z^2
 		const d = this.#data;
 		d[0] = near / right; d[1] = 0; d[2] = 0; d[3] = 0;
 		d[4] = 0; d[5] = near / bottom; d[6] = 0; d[7] = 0;
-		d[8] = 0; d[9] = 0; d[10] = far * zScale; d[11] = -far * near * zScale;
+		d[8] = 0; d[9] = 0; d[10] = farScale; d[11] = -near * farScale;
 		d[12] = 0; d[13] = 0; d[14] = 1; d[15] = 0;
+	}
+
+	inversePerspectiveProjection(near: number, far: number, aspectRatio: number, fovY: number) {
+		const perspective = Math.tan(fovY * 0.5);
+		// Define perspective bottom and right planes from vertical fov
+		const bottom = near * perspective;
+		const right = near * aspectRatio * perspective;
+		const zScale = -1 / (near - far);
+		const farScale = far * zScale;
+		// 1 / perspectiveProjection should do it?
+		const farNearScale = -near * farScale;
+		const d = this.#data;
+		d[0] = right / near ; d[1] = 0; d[2] = 0; d[3] = 0;
+		d[4] = 0; d[5] = bottom / near; d[6] = 0; d[7] = 0;
+		d[8] = 0; d[9] = 0; d[10] = 0; d[11] = 1;
+		d[12] = 0; d[13] = 0; d[14] = 1 / farNearScale; d[15] = -farScale / (farScale * farNearScale);
 	}
 
 	/** Orthographic projection, objects are their set size irregardless of distance */
