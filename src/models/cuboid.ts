@@ -3,13 +3,13 @@ import type { IGpuBindGroupLayout, IGpuBuffer, IGpuDevice, IGpuRenderPassEncoder
 import { Model } from "./model";
 
 interface ICubeConfig {
+	readonly length?: number;
 	readonly width?: number;
 	readonly height?: number;
-	readonly depth?: number;
 	readonly colors?: string;
 }
 
-export class Cube extends Model {
+export class Cuboid extends Model {
 
 	private static indices(offset: number) {
 		return [
@@ -25,17 +25,17 @@ export class Cube extends Model {
 
 	/** Triangle centered at origin */
 	constructor(device: IGpuDevice, bindGroupLayout: IGpuBindGroupLayout, {
-		width = 1,
+		length = 1,
+		width = length,
 		height = width,
-		depth = width,
 		colors = "ygbr"
 	}: ICubeConfig = {}) {
 		super(device, bindGroupLayout);
 		const cols = new Color(colors);
 		// Model the box as a simple pair of opposite points
-		const x = 0.5 * width;
+		const x = 0.5 * length;
 		const y = 0.5 * height;
-		const z = 0.5 * depth;
+		const z = 0.5 * width;
 		// Assemble each cube face
 		const vertices = new Float32Array([
 			// X: Y is "up", z is "right"
@@ -80,12 +80,12 @@ export class Cube extends Model {
 
 		// Create index buffer six sides with triangle pairs
 		const indices = new Uint16Array([
-			...Cube.indices(0),
-			...Cube.indices(4),
-			...Cube.indices(8),
-			...Cube.indices(12),
-			...Cube.indices(16),
-			...Cube.indices(20)
+			...Cuboid.indices(0),
+			...Cuboid.indices(4),
+			...Cuboid.indices(8),
+			...Cuboid.indices(12),
+			...Cuboid.indices(16),
+			...Cuboid.indices(20)
 		]);
 		this.indexBuffer = this.device.createBuffer({
 			size: indices.byteLength,

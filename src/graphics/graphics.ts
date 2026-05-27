@@ -2,7 +2,7 @@ import { DEG_TO_RAD, HALF_PI } from "../constants";
 import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "../interface";
 import { Light } from "../lights/light";
 import { Circle } from "../models/circle";
-import { Cube } from "../models/cube";
+import { Cuboid } from "../models/cuboid";
 import type { Model } from "../models/model";
 import { Rectangle } from "../models/rectangle";
 import { Triangle } from "../models/trangle";
@@ -180,41 +180,39 @@ export class Graphics {
 		// TODO Function to create models for cuboid, sphere, etc.
 		this.models = [
 			// "Skybox"
-			new Cube(this.device, modelBindGroupLayout, {
-				width: 1,
+			new Cuboid(this.device, modelBindGroupLayout, {
 				colors: "c11c"
 			})
 				.scale(-30)
 				.writeBuffer(),
 			// Initial cube
-			new Cube(this.device, modelBindGroupLayout, {
-				width: 1,
+			new Cuboid(this.device, modelBindGroupLayout, {
 				colors: "cm"
 			})
-				.translate(-1, -1, 3)
+				.translate(-1, -1, -3)
 				.rotate(0, -Math.PI * 0.25)
 				.writeBuffer(),
 			// "Hat"
-			new Cube(this.device, modelBindGroupLayout, {
-				width: 0.5,
+			new Cuboid(this.device, modelBindGroupLayout, {
+				length: 0.5,
 				colors: "y0"
 			})
-				.translate(-1, -0.25, 3)
+				.translate(-1, -0.25, -3)
 				.writeBuffer(),
 			// "Pillar"
-			new Cube(this.device, modelBindGroupLayout, {
-				width: 1,
-				depth: 3,
+			new Cuboid(this.device, modelBindGroupLayout, {
+				length: 1,
+				height: 3,
 				colors: "ry1"
 			})
-				.translate(3, -1, 6)
-				.rotate(Math.PI * 0.25, Math.PI * 0.33)
+				.translate(3, -0.5, 0)
+				.rotate(-Math.PI * 0.125, Math.PI * 0.33)
 				.writeBuffer(),
 			// Create rectangle
 			new Rectangle(this.device, modelBindGroupLayout, {
 				width: 6
 			})
-				.translate(0, -1.5, 6)
+				.translate(0, -1.5, 0)
 				.rotate(HALF_PI, 0)
 				.scale(2)
 				.writeBuffer(),
@@ -224,7 +222,7 @@ export class Graphics {
 				numPoints: 16,
 				colors: "01b"
 			})
-				.translate(-6, 2, 12)
+				.translate(-6, 2, 6)
 				.rotate(0, -Math.PI * 0.25)
 				.writeBuffer(),
 			// Create triangles
@@ -233,11 +231,11 @@ export class Graphics {
 				shiftTop: -0.75,
 				colors: "cmy"
 			})
-				.translate(-1, 0, 9)
+				.translate(-1, 0, 3)
 				.rotate(0, -Math.PI * 0.125)
 				.writeBuffer(),
 			new Triangle(this.device, modelBindGroupLayout)
-				.translate(0, 0, 6)
+				.translate(0, 0, 0)
 				.rotate(0, 0, Math.PI)
 				.writeBuffer(),
 			new Triangle(this.device, modelBindGroupLayout, {
@@ -245,7 +243,7 @@ export class Graphics {
 				shiftTop: 1.25,
 				colors: "100"
 			})
-				.translate(1, 0, 3)
+				.translate(1, 0, -3)
 				.rotate(0, Math.PI * 0.125)
 				.writeBuffer()
 		];

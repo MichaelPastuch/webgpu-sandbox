@@ -68,15 +68,15 @@ export class Engine {
 		// Orbit light around scene
 		const orbitLight = new OrbitLight(
 			this.graphics.light,
-			0, 0, 3,
+			-1, 0, -1,
 			1, 3, 0
 		);
 
 		// Move camera with user input
 		const userCamera = new UserCamera(
 			this.graphics.camera,
-			1, 0.5, 1,
-			HALF_PI * 0.9, -HALF_PI * 0.8, 5
+			1, 1, -4,
+			HALF_PI * 0.9, -HALF_PI * 0.8, 6
 		);
 
 		// Update sim
