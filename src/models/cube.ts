@@ -14,7 +14,7 @@ type TFace = [TPoint, TPoint, TPoint, TPoint];
 
 class Box {
 
-	// Create box with corner a distance away from the origin
+	// Create box with opposite corners equal distance away origin
 	constructor(
 		private readonly x: number,
 		private readonly y: number,
@@ -25,28 +25,28 @@ class Box {
 	get xFace(): TFace {
 		// Y is "up", z is "left"
 		return [
-			[-this.x, this.y, this.z],
-			[-this.x, -this.y, this.z],
-			[-this.x, -this.y, -this.z],
-			[-this.x, this.y, -this.z]
+			[this.x, this.y, this.z],
+			[this.x, -this.y, this.z],
+			[this.x, -this.y, -this.z],
+			[this.x, this.y, -this.z]
 		];
 	}
 	get yFace(): TFace {
 		// X is "right", z is "down"
 		return [
-			[-this.x, -this.y, -this.z],
-			[-this.x, -this.y, this.z],
-			[this.x, -this.y, this.z],
-			[this.x, -this.y, -this.z]
+			[-this.x, this.y, -this.z],
+			[-this.x, this.y, this.z],
+			[this.x, this.y, this.z],
+			[this.x, this.y, -this.z]
 		];
 	}
 	get zFace(): TFace {
 		// X is "right", Y is "up"
 		return [
-			[-this.x, this.y, -this.z],
-			[-this.x, -this.y, -this.z],
-			[this.x, -this.y, -this.z],
-			[this.x, this.y, -this.z]
+			[-this.x, this.y, this.z],
+			[-this.x, -this.y, this.z],
+			[this.x, -this.y, this.z],
+			[this.x, this.y, this.z]
 		];
 	}
 }
@@ -88,66 +88,35 @@ export class Cube extends Model {
 		// Assemble each cube face
 		const vertices = new Float32Array([
 			// X
-			// Top-left
-			xF[0][0], xF[0][1], xF[0][2], -1, 0, 0, ...cols.next(),
-			// Bottom-left
-			xF[1][0], xF[1][1], xF[1][2], -1, 0, 0, ...cols.next(),
-			// Bottom-right
-			xF[2][0], xF[2][1], xF[2][2], -1, 0, 0, ...cols.next(),
-			// Top-right
-			xF[3][0], xF[3][1], xF[3][2], -1, 0, 0, ...cols.next(),
-
+			xF[3][0], xF[3][1], xF[3][2], 1, 0, 0, ...cols.next(),
+			xF[2][0], xF[2][1], xF[2][2], 1, 0, 0, ...cols.next(),
+			xF[1][0], xF[1][1], xF[1][2], 1, 0, 0, ...cols.next(),
+			xF[0][0], xF[0][1], xF[0][2], 1, 0, 0, ...cols.next(),
 			// Y
-			// Top-left
-			yF[0][0], yF[0][1], yF[0][2], 0, -1, 0, ...cols.next(),
-			// Bottom-left
-			yF[1][0], yF[1][1], yF[1][2], 0, -1, 0, ...cols.next(),
-			// Bottom-right
-			yF[2][0], yF[2][1], yF[2][2], 0, -1, 0, ...cols.next(),
-			// Top-right
-			yF[3][0], yF[3][1], yF[3][2], 0, -1, 0, ...cols.next(),
-
+			yF[3][0], yF[3][1], yF[3][2], 0, 1, 0, ...cols.next(),
+			yF[2][0], yF[2][1], yF[2][2], 0, 1, 0, ...cols.next(),
+			yF[1][0], yF[1][1], yF[1][2], 0, 1, 0, ...cols.next(),
+			yF[0][0], yF[0][1], yF[0][2], 0, 1, 0, ...cols.next(),
 			// Z
-			// Top-left
-			zF[0][0], zF[0][1], zF[0][2], 0, 0, -1, ...cols.next(),
-			// Bottom-left
-			zF[1][0], zF[1][1], zF[1][2], 0, 0, -1, ...cols.next(),
-			// Bottom-right
-			zF[2][0], zF[2][1], zF[2][2], 0, 0, -1, ...cols.next(),
-			// Top-right
-			zF[3][0], zF[3][1], zF[3][2], 0, 0, -1, ...cols.next(),
-
-			// "Mirror" faces
-
+			zF[3][0], zF[3][1], zF[3][2], 0, 0, 1, ...cols.next(),
+			zF[2][0], zF[2][1], zF[2][2], 0, 0, 1, ...cols.next(),
+			zF[1][0], zF[1][1], zF[1][2], 0, 0, 1, ...cols.next(),
+			zF[0][0], zF[0][1], zF[0][2], 0, 0, 1, ...cols.next(),
 			// -X
-			// Top-left
-			-xF[3][0], xF[3][1], xF[3][2], 1, 0, 0, ...cols.next(),
-			// Bottom-left
-			-xF[2][0], xF[2][1], xF[2][2], 1, 0, 0, ...cols.next(),
-			// Bottom-right
-			-xF[1][0], xF[1][1], xF[1][2], 1, 0, 0, ...cols.next(),
-			// Top-right
-			-xF[0][0], xF[0][1], xF[0][2], 1, 0, 0, ...cols.next(),
-
+			-xF[0][0], xF[0][1], xF[0][2], -1, 0, 0, ...cols.next(),
+			-xF[1][0], xF[1][1], xF[1][2], -1, 0, 0, ...cols.next(),
+			-xF[2][0], xF[2][1], xF[2][2], -1, 0, 0, ...cols.next(),
+			-xF[3][0], xF[3][1], xF[3][2], -1, 0, 0, ...cols.next(),
 			// -Y
-			// Top-left
-			yF[3][0], -yF[3][1], yF[3][2], 0, 1, 0, ...cols.next(),
-			// Bottom-left
-			yF[2][0], -yF[2][1], yF[2][2], 0, 1, 0, ...cols.next(),
-			// Bottom-right
-			yF[1][0], -yF[1][1], yF[1][2], 0, 1, 0, ...cols.next(),
-			// Top-right
-			yF[0][0], -yF[0][1], yF[0][2], 0, 1, 0, ...cols.next(),
-
+			yF[0][0], -yF[0][1], yF[0][2], 0, -1, 0, ...cols.next(),
+			yF[1][0], -yF[1][1], yF[1][2], 0, -1, 0, ...cols.next(),
+			yF[2][0], -yF[2][1], yF[2][2], 0, -1, 0, ...cols.next(),
+			yF[3][0], -yF[3][1], yF[3][2], 0, -1, 0, ...cols.next(),
 			// -Z
-			// Top-left
-			zF[3][0], zF[3][1], -zF[3][2], 0, 0, 1, ...cols.next(),
-			// Bottom-left
-			zF[2][0], zF[2][1], -zF[2][2], 0, 0, 1, ...cols.next(),
-			// Bottom-right
-			zF[1][0], zF[1][1], -zF[1][2], 0, 0, 1, ...cols.next(),
-			// Top-right
-			zF[0][0], zF[0][1], -zF[0][2], 0, 0, 1, ...cols.next()
+			zF[0][0], zF[0][1], -zF[0][2], 0, 0, -1, ...cols.next(),
+			zF[1][0], zF[1][1], -zF[1][2], 0, 0, -1, ...cols.next(),
+			zF[2][0], zF[2][1], -zF[2][2], 0, 0, -1, ...cols.next(),
+			zF[3][0], zF[3][1], -zF[3][2], 0, 0, -1, ...cols.next(),
 		]);
 		this.vertexBuffer = this.device.createBuffer({
 			size: vertices.byteLength,
