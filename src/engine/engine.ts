@@ -79,6 +79,7 @@ export class Engine {
 			HALF_PI * 0.9, -HALF_PI * 0.8, 6
 		);
 
+		let pause = false;
 		// Update sim
 		const tick = () => {
 			TimeManager.engineUpdate = performance.now();
@@ -97,6 +98,12 @@ export class Engine {
 					0, 0, 0,
 					HALF_PI, -HALF_PI, 0.5
 				)
+			}
+			// Toggle pausing sim
+			if (Input.key(Keybind.PAUSE)) {
+				Input.clearKey(Keybind.PAUSE);
+				pause = !pause;
+				TimeManager.timeScale = pause ? 0 : TimeManager.DEFAULT_TIME_SCALE;
 			}
 		}
 

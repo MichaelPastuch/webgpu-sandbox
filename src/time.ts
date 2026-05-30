@@ -5,6 +5,9 @@ export abstract class TimeManager {
 	// Simulation rate should not exceed min delay setInterval supports
 	static readonly SIM_RATE = 30;
 	static readonly SIM_DURATION = 1000 / this.SIM_RATE;
+	static readonly DEFAULT_TIME_SCALE = 0.001;
+
+	static timeScale = this.DEFAULT_TIME_SCALE;
 
 	static engineTime: number = 0;
 	static engineDelta: number = 0;
@@ -17,7 +20,7 @@ export abstract class TimeManager {
 	/** Record when engine has updated state */
 	static set engineUpdate(value: number) {
 		this.engineDelta = value - this.engineTime;
-		this.engineScale = this.engineDelta * 0.001;
+		this.engineScale = this.engineDelta * this.timeScale;
 		this.engineTime = value;
 		// Also update frame time
 		this.frameTime = value;
@@ -26,7 +29,7 @@ export abstract class TimeManager {
 	/** Record when frame is next ready to present */
 	static set frameUpdate(value: number) {
 		this.frameDelta = value - this.frameTime;
-		this.frameScale = this.frameDelta * 0.001;
+		this.frameScale = this.frameDelta * this.timeScale;
 	}
 
 }

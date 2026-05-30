@@ -51,7 +51,6 @@ export class Input {
 	}
 
 	private static keyDown(event: KeyboardEvent) {
-		console.debug(event.code);
 		if (event.code in Input.keyTracker) {
 			Input.keyTracker[event.code as Keybind] = 1;
 		}
@@ -106,6 +105,10 @@ export class Input {
 	/** Get key hold value */
 	public static key(key: Keybind) {
 		return Input.keyTracker[key];
+	}
+	/** Clear key hold value */
+	public static clearKey(key: Keybind) {
+		Input.keyTracker[key] = 0;
 	}
 
 	/** Get mouse hold value */
