@@ -14,7 +14,9 @@ export const enum Keybind {
 	LEFT_BUMPER = "ShiftLeft",
 	RIGHT_BUMPER = "KeyC",
 	// Function
-	FULLSCREEN = "Enter"
+	FULLSCREEN = "Enter",
+	PAUSE = "NumpadEnter",
+	RESET = "Home"
 }
 
 export const enum Mouse {
@@ -38,7 +40,9 @@ export class Input {
 		[Keybind.FACE_RIGHT]: 0,
 		[Keybind.LEFT_BUMPER]: 0,
 		[Keybind.RIGHT_BUMPER]: 0,
-		[Keybind.FULLSCREEN]: 0
+		[Keybind.FULLSCREEN]: 0,
+		[Keybind.PAUSE]: 0,
+		[Keybind.RESET]: 0
 	}
 
 	private static readonly mouseTracker: Record<Mouse, 0 | 1> = {
@@ -47,6 +51,7 @@ export class Input {
 	}
 
 	private static keyDown(event: KeyboardEvent) {
+		console.debug(event.code);
 		if (event.code in Input.keyTracker) {
 			Input.keyTracker[event.code as Keybind] = 1;
 		}
@@ -91,17 +96,9 @@ export class Input {
 		document.removeEventListener("mousedown", Input.mouseDown);
 		document.removeEventListener("mouseup", Input.mouseUp);
 		// "Unset" all mouse/keyboard tracking
-		Input.keyTracker[Keybind.UP] = 0;
-		Input.keyTracker[Keybind.DOWN] = 0;
-		Input.keyTracker[Keybind.LEFT] = 0;
-		Input.keyTracker[Keybind.RIGHT] = 0;
-		Input.keyTracker[Keybind.FACE_UP] = 0;
-		Input.keyTracker[Keybind.FACE_DOWN] = 0;
-		Input.keyTracker[Keybind.FACE_LEFT] = 0;
-		Input.keyTracker[Keybind.FACE_RIGHT] = 0;
-		Input.keyTracker[Keybind.LEFT_BUMPER] = 0;
-		Input.keyTracker[Keybind.RIGHT_BUMPER] = 0;
-		Input.keyTracker[Keybind.FULLSCREEN] = 0;
+		for (const key of Object.keys(Input.keyTracker)) {
+			Input.keyTracker[key as Keybind] = 0;
+		}
 		Input.mouseTracker[Mouse.LEFT_CLICK] = 0;
 		Input.mouseTracker[Mouse.RIGHT_CLICK] = 0;
 	}

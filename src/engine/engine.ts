@@ -92,6 +92,12 @@ export class Engine {
 			if (Input.key(Keybind.FULLSCREEN) && document.fullscreenElement == null) {
 				this.canvas.requestFullscreen();
 			}
+			if (Input.key(Keybind.RESET)) {
+				userCamera.set(
+					0, 0, 0,
+					HALF_PI, -HALF_PI, 0.5
+				)
+			}
 		}
 
 		// Render frame
@@ -132,7 +138,7 @@ export class Engine {
 		// Enable FoV control
 		camBox.append(widget({
 			label: "Y Field of View",
-			initialValue: 45, min: 1, max: 180,
+			initialValue: 45, min: 15, max: 165,
 			onChange: (newFov) => this.graphics.camera.updateFov(newFov * DEG_TO_RAD)
 		}));
 

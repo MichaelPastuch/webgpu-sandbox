@@ -20,15 +20,29 @@ export class UserCamera {
 	// Track velocity
 	private readonly velocity = Vector3.unmapped();
 	private readonly direction = Vector3.unmapped();
+
+	private pitch!: number;
 	private pitchVelocity = 0;
+	private yaw!: number;
 	private yawVelocity = 0;
+	private distance!: number;
 
 	constructor(
 		private readonly camera: Camera,
 		focusX: number, focusY: number, focusZ: number,
-		private pitch: number, private yaw: number, private distance: number
+		pitch: number, yaw: number, distance: number
+	) {
+		this.set(focusX, focusY, focusZ, pitch, yaw, distance);
+	}
+
+	set(
+		focusX: number, focusY: number, focusZ: number,
+		pitch: number, yaw: number, distance: number
 	) {
 		this.focus.set(focusX, focusY, focusZ);
+		this.pitch = pitch;
+		this.yaw = yaw;
+		this.distance = distance;
 	}
 
 	/** Update on each engine tick */
