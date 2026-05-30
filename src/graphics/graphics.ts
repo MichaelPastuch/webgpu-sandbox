@@ -235,7 +235,6 @@ export class Graphics {
 				.rotate(0, -Math.PI * 0.125)
 				.writeBuffer(),
 			new Triangle(this.device, modelBindGroupLayout)
-				.translate(0, 0, 0)
 				.rotate(0, 0, Math.PI)
 				.writeBuffer(),
 			new Triangle(this.device, modelBindGroupLayout, {

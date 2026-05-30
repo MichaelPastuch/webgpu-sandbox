@@ -15,18 +15,19 @@ export class Camera {
 
 	// View matrices
 	public readonly viewBuffer: IGpuBuffer;
-	readonly #viewData = new ArrayBuffer(3 * Matrix4.byteLength + 2 * Vector3.byteLength);
+	readonly #viewData = new ArrayBuffer(4 * Matrix4.byteLength + 2 * Vector3.byteLength);
 	readonly #viewMatrix = new Matrix4(this.#viewData, 0);
 	readonly #projMatrix = new Matrix4(this.#viewData, Matrix4.byteLength);
 	readonly #viewProjMatrix = new Matrix4(this.#viewData, 2 * Matrix4.byteLength);
+	readonly #invProjMatrix = new Matrix4(this.#viewData, 3 * Matrix4.byteLength);
 
 	/** Assume always normalised and constant */
 	#universeUp = Vector3.unmapped();
 
 	/** x = right, y = up, z = forwards */
-	#position = new Vector3(this.#viewData, 3 * Matrix4.byteLength);
+	#position = new Vector3(this.#viewData, 4 * Matrix4.byteLength);
 
-	#direction = new Vector3(this.#viewData, 3 * Matrix4.byteLength + Vector3.byteLength);
+	#direction = new Vector3(this.#viewData, 4 * Matrix4.byteLength + Vector3.byteLength);
 	#right = Vector3.unmapped();
 	#up = Vector3.unmapped();
 
@@ -121,6 +122,7 @@ export class Camera {
 		this.perspectiveMode
 			? this.#projMatrix.perspectiveProjection(this.#near, this.#far, this.#aspect, fovY)
 			: this.#projMatrix.orthoProjectionMatrix(this.#near, this.#far, this.#aspect);
+		this.#invProjMatrix.inversePerspectiveProjection(this.#near, this.#far, this.#aspect, fovY);
 	}
 
 	public writeBuffer() {

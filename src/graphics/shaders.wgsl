@@ -4,6 +4,7 @@ struct View {
 	view: mat4x4f,
 	proj: mat4x4f,
 	viewProj: mat4x4f,
+	invProj: mat4x4f,
 	position: vec3f,
 	direction: vec3f
 }
@@ -59,8 +60,9 @@ fn fragmentShader(
 	let lightVec = light.position - position.xyz;
 	let lightDir = normalize(lightVec);
 
-	// Diffuse - light/normal
-	let diffuse = max(dot(lightDir, normalDir), 0.0);
+	// Diffuse - light/normal (with noise to help break up banding)
+	let noise = (fract(sin(position.x + position.y + position.z) * 159233.67567) - 0.5) * 0.075;
+	let diffuse = max(dot(lightDir, normalDir) + noise, 0.0);
 	let diffuseCol = modelDiffuse * diffuse * light.color;
 
 	// Specular - Blinn
