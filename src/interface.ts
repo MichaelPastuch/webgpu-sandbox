@@ -19,6 +19,30 @@ interface IGpuCanvasConfig {
 	// readonly viewFormats
 }
 
+/** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createSampler) */
+export interface IGpuSampler {
+	readonly label: string;
+}
+
+// Texture addressing behaviour when values leave 0-1 UV values
+type TSamplerAddressMode = "clamp-to-edge" | "repeat" | "mirror-repeat";
+type TSamplerFilter = "nearest" | "linear";
+interface IGpuSamplerDescriptor {
+	readonly label?: string;
+	readonly addressModeU?: TSamplerAddressMode;
+	readonly addressModeV?: TSamplerAddressMode;
+	readonly addressModeW?: TSamplerAddressMode;
+	readonly compare?: "always" | "never" | "equal" | "not-equal" | "less" | "less-equal" | "greater" | "greater-equal";
+	readonly lodMinClamp?: number;
+	readonly lodMaxClamp?: number;
+	/** Defaults to 1, should be within 1 to 16 */
+	readonly maxAnisotropy?: number;
+	readonly magFilter?: TSamplerFilter;
+	readonly minFilter?: TSamplerFilter;
+	readonly mipmapFilter?: TSamplerFilter;
+}
+
+
 /** [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/GPUTextureView) */
 interface IGpuTextureView {
 	readonly label: string;
@@ -87,10 +111,16 @@ interface IBindGroupTexture extends IGpuBindGroupLayoutDescriptorEntry {
 	};
 }
 
+interface IBindGroupSampler extends IGpuBindGroupLayoutDescriptorEntry {
+	readonly sampler: {
+		readonly type?: "comparison" | "filtering" | "non-filtering";
+	};
+}
+
 // Additional bind group layouts extend IGpuBindGroupLayoutDescriptorEntry
 
 // https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createBindGroupLayout#resource_layout_objects
-type TGpuBindGroupLayoutDescriptorEntries = IBindGroupBuffer | IBindGroupTexture
+type TGpuBindGroupLayoutDescriptorEntries = IBindGroupBuffer | IBindGroupTexture | IBindGroupSampler;
 
 interface IGpuBindGroupLayoutDescriptor {
 	readonly label?: string;
@@ -110,8 +140,8 @@ interface IGpuBindGroupDescriptor {
 	readonly layout: IGpuBindGroupLayout;
 	readonly entries: ReadonlyArray<{
 		readonly binding: number;
-		// TODO module variants: GPUExternalTexture, GPUSampler, GPUTextureView
-		readonly resource: IGpuBufferBinding;
+		// TODO module variants: GPUBuffer, GPUExternalTexture, GPUTextureView
+		readonly resource: IGpuBufferBinding | IGpuSampler | IGpuTexture;
 	}>
 }
 
@@ -294,6 +324,8 @@ interface IGpuCommandEncoder {
 export interface IGpuDevice {
 	createShaderModule(opts: IGpuShaderModuleOpts): IGpuShaderModule;
 	createBuffer(opts: IGpuBufferOpts): IGpuBuffer;
+	createSampler(): IGpuSampler;
+	createSampler(descriptor: IGpuSamplerDescriptor): IGpuSampler;
 	createTexture(descriptor: IGpuTextureDescriptor): IGpuTexture;
 	createBindGroupLayout(descriptor: IGpuBindGroupLayoutDescriptor): IGpuBindGroupLayout;
 	createBindGroup(descriptor: IGpuBindGroupDescriptor): IGpuBindGroup;
