@@ -63,7 +63,6 @@ export class Engine {
 		this.graphics.setAmbientColor(0.15, 0.15, 0.15);
 	}
 
-	// TODO Support "halting" render & sim via key press or page event
 	public run() {
 		// Orbit light around scene
 		const orbitLight = new OrbitLight(
