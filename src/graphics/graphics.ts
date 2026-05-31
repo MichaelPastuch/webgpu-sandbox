@@ -1,5 +1,5 @@
 import { DEG_TO_RAD, HALF_PI } from "../constants";
-import { type IGpu, type IGpuBindGroup, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "../interface";
+import { type IGpu, type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuSampler, type IGpuShaderModule, type IGpuTexture, type IGpuTextureDescriptor, type TCanvasFormat } from "../interface";
 import { Light } from "../lights/light";
 import { Circle } from "../models/circle";
 import { Cuboid } from "../models/cuboid";
@@ -35,12 +35,10 @@ export class Graphics {
 		return this.width / this.height;
 	}
 
+	private readonly depthTextureFormat = "depth24plus";
 	private depthTexture!: IGpuTexture;
-
-	// // TODO Use inverse view/projection matrix to extract position from depthTexture
-	// private gBufferPosition!: IGpuTexture;
-	// private gBufferNormal!: IGpuTexture;
-	// private gBufferColor!: IGpuTexture;
+	private gBufferNormal!: IGpuTexture;
+	private gBufferColor!: IGpuTexture;
 
 	readonly #ambientBuffer: IGpuBuffer;
 	readonly #ambientData = new ArrayBuffer(Vector3.byteLength);
@@ -48,14 +46,17 @@ export class Graphics {
 	readonly #clearColor: [number, number, number, number] = [0, 0, 0, 1];
 
 	public readonly camera: Camera;
-
 	private readonly globalBindGroup: IGpuBindGroup;
+	private readonly basicSampler: IGpuSampler;
 
 	private readonly models: Model[];
-
 	public readonly light: Light;
+	private readonly forwardPipeline: IGpuRenderPipeline;
 
-	private readonly renderPipeline: IGpuRenderPipeline;
+	private readonly deferredBindGroupLayout: IGpuBindGroupLayout;
+	private deferredBindGroup!: IGpuBindGroup;
+	private readonly lights: Model[];
+	private readonly deferredPipeline: IGpuRenderPipeline;
 
 	private constructor(
 		private readonly device: IGpuDevice,
@@ -71,13 +72,12 @@ export class Graphics {
 		});
 
 		this.camera = new Camera(this.device);
-		// Initialise dimensions, depth buffer, and camera aspect ratio
-		this.resize(canvas.width, canvas.height);
 
 		// Prepare shaders
 		this.module = this.device.createShaderModule({
 			code: shaders
 		});
+		this.basicSampler = device.createSampler();
 
 		// Assemble ambient colour buffer
 		this.#ambientBuffer = this.device.createBuffer({
@@ -119,72 +119,42 @@ export class Graphics {
 				buffer: { type: "uniform" }
 			}]
 		});
+
+		// Bind deferred pass sampler and textures
+		this.deferredBindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				// Read depth buffer & gbuffers
+				binding: 0,
+				visibility: GPUShaderStage.FRAGMENT,
+				sampler: {
+					type: "non-filtering"
+				}
+			}, {
+				binding: 1,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: {
+					sampleType: "depth"
+				}
+			}, {
+				binding: 2,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: {
+					sampleType: "float"
+				}
+			}, {
+				binding: 3,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: {
+					sampleType: "float"
+				}
+			}]
+		});
+
+		// Forward pass single light
 		this.light = new Light(this.device, lightBindGroupLayout);
 
-		// Create pipeline layout
-		const pipelineLayout = this.device.createPipelineLayout({
-			bindGroupLayouts: [
-				globalBindGroupLayout,
-				this.camera.bindGroupLayout,
-				modelBindGroupLayout,
-				lightBindGroupLayout
-			]
-		});
-
-		// TODO Functions to create/update pipeline with entryPoints and constants
-		// Input assembly - describe vertex assembly and wgsl entry points
-		this.renderPipeline = this.device.createRenderPipeline({
-			layout: pipelineLayout,
-			// Default primitive assemble, here for illustration purposes
-			primitive: {
-				cullMode: "back",
-				topology: "triangle-list"
-			},
-			depthStencil: {
-				depthWriteEnabled: true,
-				depthCompare: "less",
-				format: this.depthTexture.format
-			},
-			vertex: {
-				module: this.module,
-				entryPoint: "vertexShader",
-				buffers: [{
-					attributes: [{
-						// Position
-						shaderLocation: 0,
-						offset: 0,
-						format: "float32x3"
-					}, {
-						// Normal
-						shaderLocation: 1,
-						offset: 12,
-						format: "float32x3"
-					}, {
-						// Colour
-						shaderLocation: 2,
-						offset: 24,
-						format: "float32x3"
-					}],
-					arrayStride: 36
-				}]
-			},
-			fragment: {
-				module: this.module,
-				entryPoint: "fragmentShader",
-				targets: [{
-					format: this.format
-				}]
-			}
-		});
-
-		// TODO Function to create models for cuboid, sphere, etc.
+		// TODO Function to create models for sphere, etc.
 		this.models = [
-			// "Skybox"
-			new Cuboid(this.device, modelBindGroupLayout, {
-				colors: "c11c"
-			})
-				.scale(-30)
-				.writeBuffer(),
 			// Initial cube
 			new Cuboid(this.device, modelBindGroupLayout, {
 				colors: "cm"
@@ -244,8 +214,134 @@ export class Graphics {
 			})
 				.translate(1, 0, -3)
 				.rotate(0, Math.PI * 0.125)
+				.writeBuffer(),
+			// "Skybox"
+			new Cuboid(this.device, modelBindGroupLayout, {
+				colors: "c11c"
+			})
+				.scale(-20)
 				.writeBuffer()
 		];
+
+		// Deferred pass directional light
+		this.lights = [
+			// Directional light, applied to entire screen
+			new Rectangle(this.device, modelBindGroupLayout, {
+				width: 2,
+				colors: "c"
+			})
+				.writeBuffer()
+		];
+
+		// Create pipeline layout
+		const forwardPipelineLayout = this.device.createPipelineLayout({
+			bindGroupLayouts: [
+				globalBindGroupLayout,
+				this.camera.bindGroupLayout,
+				modelBindGroupLayout,
+				lightBindGroupLayout
+			]
+		});
+
+		// TODO Functions to create/update pipeline with entryPoints and constants
+		// Input assembly - describe vertex assembly and wgsl entry points
+		this.forwardPipeline = this.device.createRenderPipeline({
+			layout: forwardPipelineLayout,
+			// Default primitive assemble, here for illustration purposes
+			primitive: {
+				cullMode: "back",
+				topology: "triangle-list"
+			},
+			depthStencil: {
+				depthWriteEnabled: true,
+				depthCompare: "less",
+				format: this.depthTextureFormat
+			},
+			vertex: {
+				module: this.module,
+				entryPoint: "vertexShader",
+				buffers: [{
+					attributes: [{
+						// Position
+						shaderLocation: 0,
+						offset: 0,
+						format: "float32x3"
+					}, {
+						// Normal
+						shaderLocation: 1,
+						offset: 12,
+						format: "float32x3"
+					}, {
+						// Colour
+						shaderLocation: 2,
+						offset: 24,
+						format: "float32x3"
+					}],
+					arrayStride: 36
+				}]
+			},
+			fragment: {
+				module: this.module,
+				entryPoint: "fragmentShader",
+				targets: [{
+					// Normal
+					format: this.format
+				}, {
+					// Colour
+					format: this.format
+				}]
+			}
+		});
+
+		const deferredPipelineLayout = this.device.createPipelineLayout({
+			bindGroupLayouts: [
+				globalBindGroupLayout,
+				this.camera.bindGroupLayout,
+				modelBindGroupLayout,
+				this.deferredBindGroupLayout
+			]
+		});
+
+		this.deferredPipeline = this.device.createRenderPipeline({
+			layout: deferredPipelineLayout,
+			primitive: {
+				cullMode: "back",
+				topology: "triangle-list"
+			},
+			vertex: {
+				module: this.module,
+				entryPoint: "lightVertexShader",
+				buffers: [{
+					attributes: [{
+						// Position
+						shaderLocation: 0,
+						offset: 0,
+						format: "float32x3"
+					}, {
+						// Normal
+						shaderLocation: 1,
+						offset: 12,
+						format: "float32x3"
+					}, {
+						// Colour
+						shaderLocation: 2,
+						offset: 24,
+						format: "float32x3"
+					}],
+					arrayStride: 36
+				}]
+			},
+			fragment: {
+				module: this.module,
+				entryPoint: "lightFragmentShader",
+				targets: [{
+					format: this.format
+				}]
+			}
+		});
+
+		// Initialise dimensions, depth buffer, and camera aspect ratio
+		this.resize(canvas.width, canvas.height);
 	}
 
 	public resize(width: number, height: number) {
@@ -255,27 +351,43 @@ export class Graphics {
 			this.height = height;
 			this.canvas.width = this.width;
 			this.canvas.height = this.height;
+			// Update projection matrix
+			this.camera.updateProjection(1, 100, this.aspect, 45 * DEG_TO_RAD);
 			// Rebuild depth texture
 			this.depthTexture?.destroy();
 			this.depthTexture = this.device.createTexture({
-				format: "depth24plus",
+				format: this.depthTextureFormat,
 				size: [this.width, this.height],
-				usage: GPUTextureUsage.RENDER_ATTACHMENT
+				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
 			});
 			// Rebuild gbuffers
-			// const gBufferFormat: IGpuTextureDescriptor = {
-			// 	format: "bgra8unorm",
-			// 	size: [this.width, this.height],
-			// 	usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
-			// };
-			// this.gBufferPosition?.destroy();
-			// this.gBufferPosition = this.device.createTexture(gBufferFormat);
-			// this.gBufferNormal?.destroy();
-			// this.gBufferNormal = this.device.createTexture(gBufferFormat);
-			// this.gBufferColor?.destroy();
-			// this.gBufferColor = this.device.createTexture(gBufferFormat);
-			// Update projection matrix
-			this.camera.updateProjection(1, 100, this.aspect, 45 * DEG_TO_RAD);
+			const gBufferFormat: IGpuTextureDescriptor = {
+				format: "bgra8unorm",
+				size: [this.width, this.height],
+				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
+			};
+			this.gBufferNormal?.destroy();
+			this.gBufferNormal = this.device.createTexture(gBufferFormat);
+			this.gBufferColor?.destroy();
+			this.gBufferColor = this.device.createTexture(gBufferFormat);
+
+			// Rebuild deferred bindings
+			this.deferredBindGroup = this.device.createBindGroup({
+				layout: this.deferredBindGroupLayout,
+				entries: [{
+					binding: 0,
+					resource: this.basicSampler,
+				}, {
+					binding: 1,
+					resource: this.depthTexture
+				}, {
+					binding: 2,
+					resource: this.gBufferNormal
+				}, {
+					binding: 3,
+					resource: this.gBufferColor
+				}]
+			});
 		}
 	}
 
@@ -296,27 +408,17 @@ export class Graphics {
 		// Assemble GPU work batch
 		const commandEncoder = this.device.createCommandEncoder();
 
-		// Prepare render pass - clear canvas and draw triangle to it
-		const passEncoder = commandEncoder.beginRenderPass({
+		// Prepare render pass - draw models
+		const forwardPassEncoder = commandEncoder.beginRenderPass({
 			colorAttachments: [{
-				clearValue: this.#clearColor,
 				loadOp: "clear",
 				storeOp: "store",
-				view: this.context.getCurrentTexture().createView()
+				view: this.gBufferNormal.createView()
+			}, {
+				loadOp: "clear",
+				storeOp: "store",
+				view: this.gBufferColor.createView()
 			}],
-			// colorAttachments: [{
-			// 	loadOp: "clear",
-			// 	storeOp: "store",
-			// 	view: this.gBufferPosition.createView()
-			// }, {
-			// 	loadOp: "clear",
-			// 	storeOp: "store",
-			// 	view: this.gBufferNormal.createView()
-			// }, {
-			// 	loadOp: "clear",
-			// 	storeOp: "store",
-			// 	view: this.gBufferColor.createView()
-			// }],
 			depthStencilAttachment: {
 				depthClearValue: 1.0,
 				depthLoadOp: "clear",
@@ -326,22 +428,43 @@ export class Graphics {
 		});
 
 		// Render pipeline and bind groups
-		passEncoder.setPipeline(this.renderPipeline);
-		passEncoder.setBindGroup(0, this.globalBindGroup);
-		passEncoder.setBindGroup(1, this.camera.bindGroup);
+		forwardPassEncoder.setPipeline(this.forwardPipeline);
+		forwardPassEncoder.setBindGroup(0, this.globalBindGroup);
+		forwardPassEncoder.setBindGroup(1, this.camera.bindGroup);
 
 		// Bind light
-		// TODO Support multiple lights
-		passEncoder.setBindGroup(3, this.light.bindGroup);
+		forwardPassEncoder.setBindGroup(3, this.light.bindGroup);
 
 		// Draw models
 		for (const model of this.models) {
-			passEncoder.setBindGroup(2, model.bindGroup);
-			model.draw(passEncoder);
+			forwardPassEncoder.setBindGroup(2, model.bindGroup);
+			model.draw(forwardPassEncoder);
 		}
+		forwardPassEncoder.end();
 
-		// Complete render pass
-		passEncoder.end();
+		// Start deferred lighting pass
+		// Prepare render pass - clear canvas and draw lights
+		const deferredPassEncoder = commandEncoder.beginRenderPass({
+			colorAttachments: [{
+				clearValue: this.#clearColor,
+				loadOp: "clear",
+				storeOp: "store",
+				view: this.context.getCurrentTexture().createView()
+			}]
+		});
+
+		// Render pipeline and bind groups
+		deferredPassEncoder.setPipeline(this.deferredPipeline);
+		deferredPassEncoder.setBindGroup(0, this.globalBindGroup);
+		deferredPassEncoder.setBindGroup(1, this.camera.bindGroup);
+		deferredPassEncoder.setBindGroup(3, this.deferredBindGroup);
+
+		// Draw lights
+		for (const model of this.lights) {
+			deferredPassEncoder.setBindGroup(2, model.bindGroup);
+			model.draw(deferredPassEncoder);
+		}
+		deferredPassEncoder.end();
 
 		// Submit commands to GPU
 		this.device.queue.submit([commandEncoder.finish()]);

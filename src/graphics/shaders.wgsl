@@ -45,6 +45,11 @@ fn vertexShader(
 	);
 }
 
+struct FragmentOut {
+	@location(0) normal: vec4f,
+	@location(1) colour: vec4f
+}
+
 const modelDiffuse = 1;
 const modelSpecular = 1;
 const modelShininess = 1;
@@ -55,7 +60,7 @@ fn fragmentShader(
 	@location(0) position: vec4f,
 	@location(1) normal: vec4f,
 	@location(2) color: vec3f
-) -> @location(0) vec4f {
+) -> FragmentOut {
 	let normalDir = normalize(normal.xyz);
 	let lightVec = light.position - position.xyz;
 	let lightDir = normalize(lightVec);
@@ -81,5 +86,57 @@ fn fragmentShader(
 
 	// Accumulate light
 	let light = fma(diffuseCol + specularCol, vec3(attenuation), ambient);
-	return vec4(light * color, 1);
+
+	return FragmentOut(
+		normal,
+		vec4(light * color, 1)
+	);
+	// return vec4(light * color, 1);
+}
+
+@group(3) @binding(0) var gSampler: sampler;
+@group(3) @binding(1) var depthTexture: texture_depth_2d;
+@group(3) @binding(2) var gNormal: texture_2d<f32>;
+@group(3) @binding(3) var gColour: texture_2d<f32>;
+
+@vertex
+fn lightVertexShader(
+	@location(0) position: vec3f,
+	@location(1) normal: vec3f,
+	@location(2) color: vec3f
+) -> VertexOut {
+	let modelPosition = vec4f(position, 1) * model.transform;
+	return VertexOut(
+		modelPosition,
+		modelPosition,
+		vec4f(normal * model.normal, 1),
+		color
+	);
+}
+
+@fragment
+fn lightFragmentShader(
+	@builtin(position) fragment: vec4f,
+	@location(0) position: vec4f,
+	@location(1) normal: vec4f,
+	@location(2) color: vec3f
+) -> @location(0) vec4f {
+	// Convert xy positions into gbuffer texture uv
+	let viewProjX = 0.5 * (position.x + 1);
+	let viewProjY = -0.5 * (position.y - 1);
+	let tex = vec2f(viewProjX, viewProjY);
+	// TODO fetch via textureLoad?
+	// let viewProjZ = textureSample(depthTexture, gSampler, tex);
+	// return vec4f(viewProjZ, viewProjZ, viewProjZ, 1);
+
+	// Inverse project to view space surface position
+	// let surfacePos = vec4f(viewProjX, viewProjY, viewProjZ, 1) * view.invProj;
+
+	let albedo = textureSample(gColour, gSampler, tex);
+	return albedo;
+
+	// let surfaceNormal = textureSample(gNormal, gSampler, tex);
+	// return surfaceNormal;
+
+	// return vec4f((albedo + surfaceNormal + surfacePos).xyz, 1);
 }
