@@ -94,10 +94,9 @@ fn fragmentShader(
 	// return vec4(light * color, 1);
 }
 
-@group(3) @binding(0) var gSampler: sampler;
-@group(3) @binding(1) var depthTexture: texture_depth_2d;
-@group(3) @binding(2) var gNormal: texture_2d<f32>;
-@group(3) @binding(3) var gColour: texture_2d<f32>;
+@group(3) @binding(0) var depthTexture: texture_depth_2d;
+@group(3) @binding(1) var gNormal: texture_2d<f32>;
+@group(3) @binding(2) var gColour: texture_2d<f32>;
 
 @vertex
 fn lightVertexShader(
@@ -121,22 +120,15 @@ fn lightFragmentShader(
 	@location(1) normal: vec4f,
 	@location(2) color: vec3f
 ) -> @location(0) vec4f {
-	// Convert xy positions into gbuffer texture uv
-	let viewProjX = 0.5 * (position.x + 1);
-	let viewProjY = -0.5 * (position.y - 1);
-	let tex = vec2f(viewProjX, viewProjY);
-	// TODO fetch via textureLoad?
-	// let viewProjZ = textureSample(depthTexture, gSampler, tex);
-	// return vec4f(viewProjZ, viewProjZ, viewProjZ, 1);
-
+	let tex = vec2u(fragment.xy);
+	let depth = textureLoad(depthTexture, tex, 0);
 	// Inverse project to view space surface position
-	// let surfacePos = vec4f(viewProjX, viewProjY, viewProjZ, 1) * view.invProj;
+	let surfacePos = vec4f(position.x, position.y, depth, 1) * view.invProj;
+	let surfaceNormal = textureLoad(gNormal, tex, 0);
+	let albedo = textureLoad(gColour, tex, 0);
 
-	let albedo = textureSample(gColour, gSampler, tex);
-	return albedo;
-
-	// let surfaceNormal = textureSample(gNormal, gSampler, tex);
+	// return vec4f(0, depth * depth * depth, 0, 1);
+	// return surfacePos;
 	// return surfaceNormal;
-
-	// return vec4f((albedo + surfaceNormal + surfacePos).xyz, 1);
+	return albedo;
 }

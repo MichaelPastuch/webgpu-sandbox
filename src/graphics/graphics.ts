@@ -1,5 +1,5 @@
 import { DEG_TO_RAD, HALF_PI } from "../constants";
-import { type IGpu, type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuSampler, type IGpuShaderModule, type IGpuTexture, type IGpuTextureDescriptor, type TCanvasFormat } from "../interface";
+import { type IGpu, type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type IGpuTextureDescriptor, type TCanvasFormat } from "../interface";
 import { Light } from "../lights/light";
 import { Circle } from "../models/circle";
 import { Cuboid } from "../models/cuboid";
@@ -47,7 +47,7 @@ export class Graphics {
 
 	public readonly camera: Camera;
 	private readonly globalBindGroup: IGpuBindGroup;
-	private readonly basicSampler: IGpuSampler;
+	// private readonly basicSampler: IGpuSampler;
 
 	private readonly models: Model[];
 	public readonly light: Light;
@@ -77,7 +77,7 @@ export class Graphics {
 		this.module = this.device.createShaderModule({
 			code: shaders
 		});
-		this.basicSampler = device.createSampler();
+		// this.basicSampler = device.createSampler();
 
 		// Assemble ambient colour buffer
 		this.#ambientBuffer = this.device.createBuffer({
@@ -123,26 +123,19 @@ export class Graphics {
 		// Bind deferred pass sampler and textures
 		this.deferredBindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
-				// Read depth buffer & gbuffers
 				binding: 0,
-				visibility: GPUShaderStage.FRAGMENT,
-				sampler: {
-					type: "non-filtering"
-				}
-			}, {
-				binding: 1,
 				visibility: GPUShaderStage.FRAGMENT,
 				texture: {
 					sampleType: "depth"
 				}
 			}, {
-				binding: 2,
+				binding: 1,
 				visibility: GPUShaderStage.FRAGMENT,
 				texture: {
 					sampleType: "float"
 				}
 			}, {
-				binding: 3,
+				binding: 2,
 				visibility: GPUShaderStage.FRAGMENT,
 				texture: {
 					sampleType: "float"
@@ -370,21 +363,17 @@ export class Graphics {
 			this.gBufferNormal = this.device.createTexture(gBufferFormat);
 			this.gBufferColor?.destroy();
 			this.gBufferColor = this.device.createTexture(gBufferFormat);
-
-			// Rebuild deferred bindings
+			// Build deferred bindings
 			this.deferredBindGroup = this.device.createBindGroup({
 				layout: this.deferredBindGroupLayout,
 				entries: [{
 					binding: 0,
-					resource: this.basicSampler,
-				}, {
-					binding: 1,
 					resource: this.depthTexture
 				}, {
-					binding: 2,
+					binding: 1,
 					resource: this.gBufferNormal
 				}, {
-					binding: 3,
+					binding: 2,
 					resource: this.gBufferColor
 				}]
 			});
