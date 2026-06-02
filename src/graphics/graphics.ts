@@ -1,5 +1,5 @@
 import { DEG_TO_RAD, HALF_PI } from "../constants";
-import { type IGpu, type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type IGpuTextureDescriptor, type TCanvasFormat } from "../interface";
+import { type IGpu, type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "../interface";
 import { Light } from "../lights/light";
 import { Circle } from "../models/circle";
 import { Cuboid } from "../models/cuboid";
@@ -62,6 +62,7 @@ export class Graphics {
 		private readonly device: IGpuDevice,
 		private readonly canvas: HTMLCanvasElement,
 		private readonly context: IGpuCanvasContext,
+		// TODO Update interfaces to allow this type to be used for gBuffer color
 		private readonly format: TCanvasFormat
 	) {
 		// Prepare context for WebGPU rendering
@@ -115,7 +116,7 @@ export class Graphics {
 		const lightBindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
 				binding: 0,
-				visibility: GPUShaderStage.FRAGMENT,
+				visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
 				buffer: { type: "uniform" }
 			}]
 		});
@@ -132,7 +133,7 @@ export class Graphics {
 				binding: 1,
 				visibility: GPUShaderStage.FRAGMENT,
 				texture: {
-					sampleType: "float"
+					sampleType: "unfilterable-float"
 				}
 			}, {
 				binding: 2,
@@ -143,7 +144,7 @@ export class Graphics {
 			}]
 		});
 
-		// Forward pass single light
+		// Full-screen point light
 		this.light = new Light(this.device, lightBindGroupLayout);
 
 		// TODO Function to create models for sphere, etc.
@@ -231,8 +232,7 @@ export class Graphics {
 			bindGroupLayouts: [
 				globalBindGroupLayout,
 				this.camera.bindGroupLayout,
-				modelBindGroupLayout,
-				lightBindGroupLayout
+				modelBindGroupLayout
 			]
 		});
 
@@ -278,20 +278,21 @@ export class Graphics {
 				entryPoint: "fragmentShader",
 				targets: [{
 					// Normal
-					format: this.format
+					format: "rgba32float"
 				}, {
 					// Colour
-					format: this.format
+					format: "bgra8unorm"
 				}]
 			}
 		});
+		
 
 		const deferredPipelineLayout = this.device.createPipelineLayout({
 			bindGroupLayouts: [
 				globalBindGroupLayout,
 				this.camera.bindGroupLayout,
-				modelBindGroupLayout,
-				this.deferredBindGroupLayout
+				this.deferredBindGroupLayout,
+				lightBindGroupLayout
 			]
 		});
 
@@ -354,15 +355,18 @@ export class Graphics {
 				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
 			});
 			// Rebuild gbuffers
-			const gBufferFormat: IGpuTextureDescriptor = {
+			this.gBufferNormal?.destroy();
+			this.gBufferNormal = this.device.createTexture({
+				format: "rgba32float",
+				size: [this.width, this.height],
+				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
+			});
+			this.gBufferColor?.destroy();
+			this.gBufferColor = this.device.createTexture({
 				format: "bgra8unorm",
 				size: [this.width, this.height],
 				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
-			};
-			this.gBufferNormal?.destroy();
-			this.gBufferNormal = this.device.createTexture(gBufferFormat);
-			this.gBufferColor?.destroy();
-			this.gBufferColor = this.device.createTexture(gBufferFormat);
+			});
 			// Build deferred bindings
 			this.deferredBindGroup = this.device.createBindGroup({
 				layout: this.deferredBindGroupLayout,
@@ -421,9 +425,6 @@ export class Graphics {
 		forwardPassEncoder.setBindGroup(0, this.globalBindGroup);
 		forwardPassEncoder.setBindGroup(1, this.camera.bindGroup);
 
-		// Bind light
-		forwardPassEncoder.setBindGroup(3, this.light.bindGroup);
-
 		// Draw models
 		for (const model of this.models) {
 			forwardPassEncoder.setBindGroup(2, model.bindGroup);
@@ -445,12 +446,15 @@ export class Graphics {
 		// Render pipeline and bind groups
 		deferredPassEncoder.setPipeline(this.deferredPipeline);
 		deferredPassEncoder.setBindGroup(0, this.globalBindGroup);
+		// TODO Create bind group combining deferred textures and camera?
 		deferredPassEncoder.setBindGroup(1, this.camera.bindGroup);
-		deferredPassEncoder.setBindGroup(3, this.deferredBindGroup);
+		deferredPassEncoder.setBindGroup(2, this.deferredBindGroup);
 
+		// TODO Bind light per entry
+		deferredPassEncoder.setBindGroup(3, this.light.bindGroup);
 		// Draw lights
 		for (const model of this.lights) {
-			deferredPassEncoder.setBindGroup(2, model.bindGroup);
+			// deferredPassEncoder.setBindGroup(3, this.light.bindGroup);
 			model.draw(deferredPassEncoder);
 		}
 		deferredPassEncoder.end();

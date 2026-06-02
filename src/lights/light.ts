@@ -1,18 +1,22 @@
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "../interface";
+import { Matrix4 } from "../matrix/matrix4";
 import { Vector3 } from "../vector/vector3";
 
 export class Light {
 
 	readonly #lightBuffer: IGpuBuffer;
-	readonly #lightData = new ArrayBuffer(3 * Vector3.byteLength);
+	readonly #lightData = new ArrayBuffer(Matrix4.byteLength + 3 * Vector3.byteLength);
 
-	#position = new Vector3(this.#lightData, 0);
-	#color = new Vector3(this.#lightData, Vector3.byteLength);
-	#attenuation = new Vector3(this.#lightData, 2 * Vector3.byteLength);
+	readonly #lightMatrix = new Matrix4(this.#lightData, 0);
+	#position = new Vector3(this.#lightData, Matrix4.byteLength);
+	// TODO Direction
+	#color = new Vector3(this.#lightData, Matrix4.byteLength + Vector3.byteLength);
+	#attenuation = new Vector3(this.#lightData, Matrix4.byteLength + 2 * Vector3.byteLength);
 
 	public readonly bindGroup: IGpuBindGroup;
 
 	constructor(private readonly device: IGpuDevice, bindGroupLayout: IGpuBindGroupLayout) {
+		this.#lightMatrix.identity();
 		this.#position.set(0, 0, 0);
 		this.#color.set(1, 1, 1);
 		// this.#attenuation.set(1, 0.22, 0.20);
