@@ -67,7 +67,9 @@ export interface IGpuTextureDescriptor {
 	// Depth/stencil
 	"stencil8" | "depth16unorm" | "depth24plus" | "depth24plus-stencil8" | "depth32float" |
 	// Common
-	"bgra8unorm"
+	"bgra8unorm" |
+	// Float
+	"rgba32float"
 	// Subject to dimension
 	// TODO create typings for each dimension with size constraints
 	readonly size: [width: number] | [number, number] | [number, number, number] |
