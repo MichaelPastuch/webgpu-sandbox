@@ -1,4 +1,5 @@
 import type { Quaternion } from "../vector/quaternion";
+import type { Vector3 } from "../vector/vector3";
 
 // 3x3 matrices need columns packing with extra zeroes
 type TMatrix3 = [
@@ -25,6 +26,16 @@ export class Matrix3 {
 		d[0] = 1; d[1] = 0; d[2] = 0; //d[3] = 0;
 		d[4] = 0; d[5] = 1; d[6] = 0; //d[7] = 0;
 		d[8] = 0; d[9] = 0; d[10] = 1; //d[11] = 0;
+	}
+
+	lookAtRH(forward: Vector3, up: Vector3, right: Vector3) {
+		const f = forward._;
+		const u = up._;
+		const r = right._;
+		const d = this.#data;
+		d[0] = r[0]; d[1] = r[1]; d[2] = r[2]; //d[3] = 0;
+		d[4] = u[0]; d[5] = u[1]; d[6] = u[2]; //d[7] = 0;
+		d[8] = f[0]; d[9] = f[1]; d[10] = f[2]; //d[11] = 0;
 	}
 
 	transposeRotation(rotation: Quaternion) {
