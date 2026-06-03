@@ -63,13 +63,13 @@ export interface IGpuTextureDescriptor {
 	readonly dimension?: "1d" | "2d" | "3d";
 	// TODO Add formats as they are required
 	/** [WebGPU Reference](https://gpuweb.github.io/gpuweb/#enumdef-gputextureformat) */
-	readonly format: "rgba8uint" |
+	readonly format:
 	// Depth/stencil
 	"stencil8" | "depth16unorm" | "depth24plus" | "depth24plus-stencil8" | "depth32float" |
 	// Common
-	"bgra8unorm" |
+	"rgba8uint" | "rgba8sint" | "rgba8unorm" | "bgra8unorm" |
 	// Float
-	"rgba32float"
+	"rgba16float" | "rgba32float"
 	// Subject to dimension
 	// TODO create typings for each dimension with size constraints
 	readonly size: [width: number] | [number, number] | [number, number, number] |
