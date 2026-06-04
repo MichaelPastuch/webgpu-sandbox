@@ -30,6 +30,11 @@ export class Matrix4 {
 		this.#data = new Float32Array(buffer, byteOffset, Matrix4.length) as unknown as TMatrix4;
 	}
 
+	/** Access raw data */
+	get _() {
+		return this.#data;
+	}
+
 	identity() {
 		const d = this.#data;
 		d[0] = 1; d[1] = 0; d[2] = 0; d[3] = 0;
@@ -108,10 +113,10 @@ export class Matrix4 {
 		// 1 / perspectiveProjection should do it?
 		const farNearScale = -near * farScale;
 		const d = this.#data;
-		d[0] = right / near ; d[1] = 0; d[2] = 0; d[3] = 0;
+		d[0] = right / near; d[1] = 0; d[2] = 0; d[3] = 0;
 		d[4] = 0; d[5] = bottom / near; d[6] = 0; d[7] = 0;
 		d[8] = 0; d[9] = 0; d[10] = 0; d[11] = 1;
-		d[12] = 0; d[13] = 0; d[14] = 1 / farNearScale; d[15] = -farScale / (farScale * farNearScale);
+		d[12] = 0; d[13] = 0; d[14] = 1 / farNearScale; d[15] = -farScale / farNearScale;
 	}
 
 	/** Orthographic projection, objects are their set size irregardless of distance */

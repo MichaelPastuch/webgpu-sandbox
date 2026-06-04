@@ -37,6 +37,7 @@ export class Graphics {
 
 	private readonly depthTextureFormat = "depth24plus";
 	private depthTexture!: IGpuTexture;
+	private readonly gBufferNormalFormat = "rgba16float";
 	private gBufferNormal!: IGpuTexture;
 	private gBufferColor!: IGpuTexture;
 
@@ -145,7 +146,7 @@ export class Graphics {
 		});
 
 		// Full-screen point light
-		this.light = new Light(this.device, lightBindGroupLayout);
+		this.light = new Light(this.device, this.camera.viewMatrix, lightBindGroupLayout);
 
 		// TODO Function to create models for sphere, etc.
 		this.models = [
@@ -278,14 +279,13 @@ export class Graphics {
 				entryPoint: "fragmentShader",
 				targets: [{
 					// Normal
-					format: "rgba32float"
+					format: this.gBufferNormalFormat
 				}, {
 					// Colour
 					format: "bgra8unorm"
 				}]
 			}
 		});
-		
 
 		const deferredPipelineLayout = this.device.createPipelineLayout({
 			bindGroupLayouts: [
@@ -357,7 +357,7 @@ export class Graphics {
 			// Rebuild gbuffers
 			this.gBufferNormal?.destroy();
 			this.gBufferNormal = this.device.createTexture({
-				format: "rgba32float",
+				format: this.gBufferNormalFormat,
 				size: [this.width, this.height],
 				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
 			});
@@ -404,11 +404,11 @@ export class Graphics {
 		// Prepare render pass - draw models
 		const forwardPassEncoder = commandEncoder.beginRenderPass({
 			colorAttachments: [{
-				loadOp: "clear",
+				loadOp: "load",
 				storeOp: "store",
 				view: this.gBufferNormal.createView()
 			}, {
-				loadOp: "clear",
+				loadOp: "load",
 				storeOp: "store",
 				view: this.gBufferColor.createView()
 			}],
@@ -437,7 +437,7 @@ export class Graphics {
 		const deferredPassEncoder = commandEncoder.beginRenderPass({
 			colorAttachments: [{
 				clearValue: this.#clearColor,
-				loadOp: "clear",
+				loadOp: "load",
 				storeOp: "store",
 				view: this.context.getCurrentTexture().createView()
 			}]

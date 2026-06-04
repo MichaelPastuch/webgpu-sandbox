@@ -21,6 +21,11 @@ export class Matrix3 {
 		this.#data = new Float32Array(buffer, byteOffset, Matrix3.length) as unknown as TMatrix3;
 	}
 
+	/** Access raw data - **NOTE** - typed as a TMatrix3 but returns Float32Array of length 12 */
+	get _() {
+		return this.#data;
+	}
+
 	identity() {
 		const d = this.#data;
 		d[0] = 1; d[1] = 0; d[2] = 0; //d[3] = 0;

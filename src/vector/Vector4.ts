@@ -1,3 +1,4 @@
+import type { Matrix4 } from "../matrix/matrix4";
 
 type TVec4 = [number, number, number, number];
 
@@ -41,5 +42,15 @@ export class Vector4 {
 		this.#data[1] = y;
 		this.#data[2] = z;
 		this.#data[3] = w;
+	}
+
+	/** Set from Vector4 multiplied by Matrix4 */
+	mul(vec: Vector4, mat: Matrix4) {
+		const v = vec._;
+		const m = mat._;
+		this.#data[0] = v[0] * m[0] + v[1] * m[1] + v[2] * m[2] + v[3] * m[3];
+		this.#data[1] = v[0] * m[4] + v[1] * m[5] + v[2] * m[6] + v[3] * m[7];
+		this.#data[2] = v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + v[3] * m[11];
+		this.#data[3] = v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + v[3] * m[14];
 	}
 }

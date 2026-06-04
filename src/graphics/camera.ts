@@ -17,7 +17,7 @@ export class Camera {
 	// View matrices
 	public readonly viewBuffer: IGpuBuffer;
 	readonly #viewData = new ArrayBuffer(4 * Matrix4.byteLength + Matrix3.byteLength + 2 * Vector3.byteLength);
-	readonly #viewMatrix = new Matrix4(this.#viewData, 0);
+	readonly viewMatrix = new Matrix4(this.#viewData, 0);
 	readonly #projMatrix = new Matrix4(this.#viewData, Matrix4.byteLength);
 	readonly #viewProjMatrix = new Matrix4(this.#viewData, 2 * Matrix4.byteLength);
 	readonly #invProjMatrix = new Matrix4(this.#viewData, 3 * Matrix4.byteLength);
@@ -87,7 +87,7 @@ export class Camera {
 		// View up from right
 		this.#up.cross(this.#direction, this.#right);
 		this.#up.normalize();
-		this.#viewMatrix.lookAtRH(this.#position, this.#direction, this.#up, this.#right);
+		this.viewMatrix.lookAtRH(this.#position, this.#direction, this.#up, this.#right);
 		this.#normalMatrix.lookAtRH(this.#direction, this.#up, this.#right);
 	}
 
@@ -131,7 +131,7 @@ export class Camera {
 	public writeBuffer() {
 		// Update view x projection
 		this.#viewProjMatrix.multiply(
-			this.#viewMatrix,
+			this.viewMatrix,
 			this.#projMatrix
 		);
 		this.device.queue.writeBuffer(
