@@ -13,6 +13,10 @@ struct View {
 }
 @group(1) @binding(0) var<uniform> view: View;
 
+// const gamma = 2.2;
+const gamma = 1.4;
+const gammaPow = vec3f(1.0 / gamma);
+
 // Forward shaders and bindings
 
 struct Model {
@@ -50,9 +54,9 @@ struct FragmentOut {
 }
 
 // TODO Pack these values in the gBuffer, normal and colour have spare w components
-const modelDiffuse = 1;
-const modelSpecular = 1;
-const modelShininess = 1;
+const modelDiffuse = 1.0;
+const modelSpecular = 1.0;
+const modelShininess = 16.0;
 
 @fragment
 fn fragmentShader(
@@ -127,18 +131,6 @@ fn lightFragmentShader(
 	let lightDir = lightVec / distance;
 	// return vec4((1.0 + lightDir) * 0.5, 1);
 
-	// Diffuse - light/normal (with noise to help break up banding)
-	// let noise = (fract(sin(surfacePos.x + invProjPos.y + depth) * 159233.67567) - 0.5) * 0.05;
-	// let diffuse = max(dot(lightDir, surfaceNormal.xyz + noise), 0.0);
-	let diffuse = max(dot(lightDir, surfaceNormal), 0.0);
-	let diffuseCol = modelDiffuse * diffuse * light.color;
-
-	// Specular - Blinn
-	let viewDir = normalize(-surfacePos.xyz);
-	let midDir = normalize(lightDir + viewDir);
-	let specular = pow(max(dot(surfaceNormal, midDir), 0.0), modelShininess);
-	let specularCol = modelSpecular * specular * light.color;
-
 	// Distance attenuation
 	let attenuation = 1.0 / (
 		light.attenuation.x +
@@ -146,8 +138,22 @@ fn lightFragmentShader(
 		light.attenuation.z * (distance * distance)
 	);
 
+	// Diffuse - light/normal (with noise to help break up banding)
+	// let noise = (fract(sin(surfacePos.x + invProjPos.y + depth) * 159233.67567) - 0.5) * 0.05;
+	// let diffuse = max(dot(lightDir, surfaceNormal.xyz + noise), 0.0);
+	let diffuse = max(dot(lightDir, surfaceNormal), 0.0);
+	let diffuseCol = modelDiffuse * diffuse * attenuation * light.color;
+
+	// Specular - Blinn
+	let viewDir = normalize(-surfacePos.xyz);
+	let midDir = normalize(lightDir + viewDir);
+	let specular = pow(max(dot(surfaceNormal, midDir), 0.0), modelShininess);
+	let specularCol = modelSpecular * specular * attenuation * light.color;
+
 	// Accumulate light
-	let light = fma(diffuseCol + specularCol, vec3(attenuation), step(depth, 0.99999) * ambient);
+	let light = step(depth, 0.99999) * ambient + diffuseCol + specularCol;
 	// return vec4(light, 1);
-	return vec4(light * albedo.xyz, 1);
+
+	// Apply gamma correction
+	return vec4(pow(light * albedo.xyz, gammaPow), 1);
 }
