@@ -119,17 +119,19 @@ fn lightFragmentShader(
 	// Debug gbuffer views
 	// return vec4f(0, depth * depth * depth, 0, 1);
 	// return vec4f(0.5 * (surfaceClipPos.xy + 1), surfaceClipPos.z, 1);
-	// return vec4f((4 + surfacePos) * 0.025, 1);
+	// return vec4f((4 + surfacePos) * 0.05, 1);
 	// return vec4f(abs(surfaceNormal), 1);
 	// return albedo;
 
 	let lightVec = lightViewPos.xyz - surfacePos.xyz;
-	let lightDir = normalize(lightVec);
+	let distance = length(lightVec);
+	let lightDir = lightVec / distance;
+	// return vec4((1.0 + lightDir) * 0.5, 1);
 
 	// Diffuse - light/normal (with noise to help break up banding)
-	let noise = (fract(sin(surfacePos.x + invProjPos.y + depth) * 159233.67567) - 0.5) * 0.075;
-	let diffuse = max(dot(lightDir, surfaceNormal.xyz + noise), 0.0);
-	// let diffuse = max(dot(lightDir, surfaceNormal), 0.0);
+	// let noise = (fract(sin(surfacePos.x + invProjPos.y + depth) * 159233.67567) - 0.5) * 0.05;
+	// let diffuse = max(dot(lightDir, surfaceNormal.xyz + noise), 0.0);
+	let diffuse = max(dot(lightDir, surfaceNormal), 0.0);
 	let diffuseCol = modelDiffuse * diffuse * light.color;
 
 	// Specular - Blinn
@@ -139,7 +141,6 @@ fn lightFragmentShader(
 	let specularCol = modelSpecular * specular * light.color;
 
 	// Distance attenuation
-	let distance = length(lightVec);
 	let attenuation = 1.0 / (
 		light.attenuation.x +
 		light.attenuation.y * distance +
@@ -147,7 +148,7 @@ fn lightFragmentShader(
 	);
 
 	// Accumulate light
-	let light = fma(diffuseCol + specularCol, vec3(attenuation), ambient);
+	let light = fma(diffuseCol + specularCol, vec3(attenuation), step(depth, 0.99999) * ambient);
 	// return vec4(light, 1);
 	return vec4(light * albedo.xyz, 1);
 }
