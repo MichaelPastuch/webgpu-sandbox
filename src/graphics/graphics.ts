@@ -146,7 +146,7 @@ export class Graphics {
 		});
 
 		// Full-screen point light
-		this.light = new Light(this.device, lightBindGroupLayout);
+		this.light = new Light(this.device, this.camera.viewMatrix, lightBindGroupLayout);
 
 		// TODO Function to create models for sphere, etc.
 		this.models = [

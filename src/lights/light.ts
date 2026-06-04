@@ -1,23 +1,31 @@
 import type { IGpuBindGroup, IGpuBindGroupLayout, IGpuBuffer, IGpuDevice } from "../interface";
 import { Matrix4 } from "../matrix/matrix4";
 import { Vector3 } from "../vector/vector3";
+import { Vector4 } from "../vector/vector4";
 
 export class Light {
 
 	readonly #lightBuffer: IGpuBuffer;
-	readonly #lightData = new ArrayBuffer(Matrix4.byteLength + 3 * Vector3.byteLength);
+	readonly #lightData = new ArrayBuffer(Matrix4.byteLength + 2 * Vector4.byteLength + 2 * Vector3.byteLength);
 
 	readonly #lightMatrix = new Matrix4(this.#lightData, 0);
-	#position = new Vector3(this.#lightData, Matrix4.byteLength);
+	#position = new Vector4(this.#lightData, Matrix4.byteLength);
+	#viewPosition = new Vector4(this.#lightData, Matrix4.byteLength + Vector4.byteLength);
 	// TODO Direction
-	#color = new Vector3(this.#lightData, Matrix4.byteLength + Vector3.byteLength);
-	#attenuation = new Vector3(this.#lightData, Matrix4.byteLength + 2 * Vector3.byteLength);
+	#color = new Vector3(this.#lightData, Matrix4.byteLength + 2 * Vector4.byteLength);
+	#attenuation = new Vector3(this.#lightData, Matrix4.byteLength + 2 * Vector4.byteLength + Vector3.byteLength);
+
+	// TODO Experiment calculating viewposition from given camera view transform
 
 	public readonly bindGroup: IGpuBindGroup;
 
-	constructor(private readonly device: IGpuDevice, bindGroupLayout: IGpuBindGroupLayout) {
+	constructor(
+		private readonly device: IGpuDevice,
+		private readonly viewMatrix: Matrix4,
+		bindGroupLayout: IGpuBindGroupLayout,
+	) {
 		this.#lightMatrix.identity();
-		this.#position.set(0, 0, 0);
+		this.#position.set(0, 0, 0, 1);
 		this.#color.set(1, 1, 1);
 		// this.#attenuation.set(1, 0.22, 0.20);
 		this.#attenuation.set(1, 0.14, 0.07);
@@ -35,7 +43,8 @@ export class Light {
 	}
 
 	public position(x: number, y: number, z: number) {
-		this.#position.set(x, y, z);
+		this.#position.set(x, y, z, 1);
+		this.#viewPosition.mul(this.#position, this.viewMatrix);
 		return this;
 	}
 

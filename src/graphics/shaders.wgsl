@@ -76,7 +76,8 @@ fn fragmentShader(
 
 struct Light {
 	transform: mat4x4f,
-	position: vec3f,
+	position: vec4f,
+	viewPosition: vec4f,
 	color: vec3f,
 	attenuation: vec3f
 }
@@ -89,13 +90,11 @@ fn lightVertexShader(
 	@location(2) color: vec3f
 ) -> VertexOut {
 	let lightPosition = vec4f(position, 1) * light.transform;
-	// Cheat light in view space, this should be part of the light binding
-	let lightViewPosition = vec4f(light.position, 1) * view.view;
 	return VertexOut(
 		// Don't apply camera transform for directional light
 		lightPosition,
 		lightPosition,
-		lightViewPosition,
+		vec4f(normal, 1),
 		color
 	);
 }
@@ -104,7 +103,7 @@ fn lightVertexShader(
 fn lightFragmentShader(
 	@builtin(position) fragment: vec4f,
 	@location(0) position: vec4f,
-	@location(1) lightViewPos: vec4f,
+	@location(1) normal: vec4f,
 	@location(2) color: vec3f
 ) -> @location(0) vec4f {
 	let tex = vec2u(fragment.xy);
@@ -123,7 +122,7 @@ fn lightFragmentShader(
 	// return vec4f(abs(surfaceNormal), 1);
 	// return albedo;
 
-	let lightVec = lightViewPos.xyz - surfacePos.xyz;
+	let lightVec = light.viewPosition.xyz - surfacePos.xyz;
 	let distance = length(lightVec);
 	let lightDir = lightVec / distance;
 	// return vec4((1.0 + lightDir) * 0.5, 1);
@@ -152,4 +151,3 @@ fn lightFragmentShader(
 	// return vec4(light, 1);
 	return vec4(light * albedo.xyz, 1);
 }
-
