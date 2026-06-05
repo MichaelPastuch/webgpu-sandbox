@@ -137,18 +137,20 @@ fn lightFragmentShader(
 		light.attenuation.y * distance +
 		light.attenuation.z * (distance * distance)
 	);
+	// Ignore very low attenuation (when less than 1/255)
+	let attenScale = step(1.0 - attenuation, 0.996) * attenuation;
 
 	// Diffuse - light/normal (with noise to help break up banding)
 	// let noise = (fract(sin(surfacePos.x + invProjPos.y + depth) * 159233.67567) - 0.5) * 0.05;
 	// let diffuse = max(dot(lightDir, surfaceNormal.xyz + noise), 0.0);
 	let diffuse = max(dot(lightDir, surfaceNormal), 0.0);
-	let diffuseCol = modelDiffuse * diffuse * attenuation * light.color;
+	let diffuseCol = modelDiffuse * diffuse * attenScale * light.color;
 
 	// Specular - Blinn
 	let viewDir = normalize(-surfacePos.xyz);
 	let midDir = normalize(lightDir + viewDir);
 	let specular = pow(max(dot(surfaceNormal, midDir), 0.0), modelShininess);
-	let specularCol = modelSpecular * specular * attenuation * light.color;
+	let specularCol = modelSpecular * specular * attenScale * light.color;
 
 	// Accumulate light
 	let light = step(depth, 0.99999) * ambient + diffuseCol + specularCol;

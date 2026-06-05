@@ -27,8 +27,9 @@ export class Light {
 		this.#lightMatrix.identity();
 		this.#position.set(0, 0, 0, 1);
 		this.#color.set(1, 1, 1);
+		this.range(9);
 		// this.#attenuation.set(1, 0.22, 0.20);
-		this.#attenuation.set(1, 0.14, 0.07);
+		// this.#attenuation.set(1, 0.14, 0.07);
 		this.#lightBuffer = this.device.createBuffer({
 			size: this.#lightData.byteLength,
 			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
@@ -40,6 +41,11 @@ export class Light {
 				resource: { buffer: this.#lightBuffer }
 			}]
 		});
+	}
+
+	/** Adjust distance attenuation, recommend 2 or greater */
+	public range(range: number) {
+		this.#attenuation.set(1, 2.0 / range, 1.0 / (range * range));
 	}
 
 	public position(x: number, y: number, z: number) {
