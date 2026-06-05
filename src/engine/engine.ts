@@ -25,6 +25,8 @@ export class Engine {
 		return this.frameScaleAvg.average;
 	}
 
+	private readonly orbitLight: OrbitLight;
+
 	private constructor(
 		private readonly canvas: HTMLCanvasElement,
 		private readonly graphics: Graphics
@@ -59,17 +61,18 @@ export class Engine {
 			}
 		});
 
+		// Orbit light around scene
+		this.orbitLight = new OrbitLight(
+			this.graphics.light,
+			-1, 0, -1,
+			1, 3, 0
+		);
+
 		// Initialise graphics
 		this.graphics.setAmbientColor(0.15, 0.15, 0.15);
 	}
 
 	public run() {
-		// Orbit light around scene
-		const orbitLight = new OrbitLight(
-			this.graphics.light,
-			-1, 0, -1,
-			1, 3, 0
-		);
 
 		// Move camera with user input
 		const userCamera = new UserCamera(
@@ -85,7 +88,7 @@ export class Engine {
 			this.engineDeltaAvg.update(TimeManager.engineDelta);
 
 			// Advance physics
-			orbitLight.update();
+			this.orbitLight.update();
 			userCamera.update();
 
 			// Enter fullscreen
@@ -112,7 +115,7 @@ export class Engine {
 			this.frameScaleAvg.update(Time.frameScale);
 
 			// Extrapolate physics for frame
-			orbitLight.writeFrame();
+			this.orbitLight.writeFrame();
 			userCamera.writeFrame();
 
 			// Draw results
@@ -195,11 +198,30 @@ export class Engine {
 				updateAmbient();
 			}
 		}));
+
+		const globalHeading = document.createElement("h3");
+		globalHeading.innerText = "Global";
+		mount.append(globalHeading);
 		mount.append(camBox);
 
-		// Enable light colour control
+		// Enable light control
 		const lightBox = widgetBox();
 
+		lightBox.append(widget({
+			label: "Strength",
+			initialValue: 9, min: 2, max: 50,
+			onChange: (newRange) => this.graphics.light.range(newRange)
+		}));
+		lightBox.append(widget({
+			label: "Orbit Radius",
+			initialValue: 30, min: 0, max: 100,
+			onChange: (newDistance) => this.orbitLight.updateDistance(0.1 * newDistance)
+		}));
+		lightBox.append(widget({
+			label: "Angular Velocity",
+			initialValue: 100, min: 0, max: 500,
+			onChange: (newVelocity) => this.orbitLight.updateVelocity(0.01 * newVelocity)
+		}));
 		let lightR = 90;
 		let lightG = 90;
 		let lightB = 80;
@@ -212,15 +234,8 @@ export class Engine {
 			);
 		}
 		updateLight();
-
-		// TODO support updating light velocity
-		// lightBox.append(widget({
-		// 	label: "Light velocity",
-		// 	initialValue: 2, min: 0, max: 10,
-		// 	onChange: (newVelocity) => lightVelocity = newVelocity
-		// }));
 		lightBox.append(widget({
-			label: "Light Red",
+			label: "Red",
 			initialValue: lightR, min: 0, max: 100,
 			onChange: (red) => {
 				lightR = red;
@@ -228,7 +243,7 @@ export class Engine {
 			}
 		}));
 		lightBox.append(widget({
-			label: "Light Green",
+			label: "Green",
 			initialValue: lightG, min: 0, max: 100,
 			onChange: (green) => {
 				lightG = green;
@@ -236,7 +251,7 @@ export class Engine {
 			}
 		}));
 		lightBox.append(widget({
-			label: "Light Blue",
+			label: "Blue",
 			initialValue: lightB, min: 0, max: 100,
 			onChange: (blue) => {
 				lightB = blue;
@@ -244,6 +259,9 @@ export class Engine {
 			}
 		}));
 
+		const lightHeading = document.createElement("h3");
+		lightHeading.innerText = "Light";
+		mount.append(lightHeading);
 		mount.append(lightBox);
 	}
 
