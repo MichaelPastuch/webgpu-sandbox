@@ -14,6 +14,14 @@ export class OrbitLight {
 		private angle: number
 	) { }
 
+	public updateVelocity(newValue: number) {
+		this.velocity = newValue;
+	}
+
+	public updateDistance(newValue: number) {
+		this.distance = newValue;
+	}
+
 	/** Update on each engine tick */
 	update() {
 		this.angle = wrapRadians(this.angle, this.velocity * Time.engineScale)
