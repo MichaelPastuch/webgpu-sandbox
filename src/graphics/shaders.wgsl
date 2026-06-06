@@ -103,6 +103,25 @@ fn lightVertexShader(
 	);
 }
 
+fn attenuation(distance: f32, factors: vec3f) -> f32 {
+	let attenuation = 1.0 / (
+		factors.x +
+		factors.y * distance +
+		factors.z * (distance * distance)
+	);
+	// Ignore very low attenuation (when less than ~1/255)
+	return step(0.004, attenuation) * attenuation;
+}
+
+fn diffuse(lightDir: vec3f, surfaceNormal: vec3f) -> f32 {
+	return max(dot(lightDir, surfaceNormal), 0.0);
+}
+
+// Blinn
+fn specular(lightDir: vec3f, surfaceNormal: vec3f, viewDir: vec3f, shininess: f32) -> f32 {
+	return pow(max(dot(normalize(lightDir + viewDir), surfaceNormal), 0.0), shininess);
+}
+
 @fragment
 fn lightFragmentShader(
 	@builtin(position) fragment: vec4f,
@@ -129,31 +148,13 @@ fn lightFragmentShader(
 	let lightVec = light.viewPosition.xyz - surfacePos.xyz;
 	let distance = length(lightVec);
 	let lightDir = lightVec / distance;
-	// return vec4((1.0 + lightDir) * 0.5, 1);
 
-	// Distance attenuation
-	let attenuation = 1.0 / (
-		light.attenuation.x +
-		light.attenuation.y * distance +
-		light.attenuation.z * (distance * distance)
-	);
-	// Ignore very low attenuation (when less than 1/255)
-	let attenScale = step(1.0 - attenuation, 0.996) * attenuation;
-
-	// Diffuse - light/normal (with noise to help break up banding)
-	// let noise = (fract(sin(surfacePos.x + invProjPos.y + depth) * 159233.67567) - 0.5) * 0.05;
-	// let diffuse = max(dot(lightDir, surfaceNormal.xyz + noise), 0.0);
-	let diffuse = max(dot(lightDir, surfaceNormal), 0.0);
-	let diffuseCol = modelDiffuse * diffuse * attenScale * light.color;
-
-	// Specular - Blinn
-	let viewDir = normalize(-surfacePos.xyz);
-	let midDir = normalize(lightDir + viewDir);
-	let specular = pow(max(dot(surfaceNormal, midDir), 0.0), modelShininess);
-	let specularCol = modelSpecular * specular * attenScale * light.color;
+	let attenScale = attenuation(distance, light.attenuation);
+	let diffuseCol = modelDiffuse * diffuse(lightDir, surfaceNormal) * attenScale * light.color;
+	let specularCol = modelSpecular * specular(lightDir, surfaceNormal, normalize(-surfacePos.xyz), modelShininess) * attenScale * light.color;
 
 	// Accumulate light
-	let light = step(depth, 0.99999) * ambient + diffuseCol + specularCol;
+	let light = ambient + diffuseCol + specularCol;
 	// return vec4(light, 1);
 
 	// Apply gamma correction
