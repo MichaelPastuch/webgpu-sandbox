@@ -180,13 +180,33 @@ interface IVertexPipeline extends IPipelineBase {
 	}>
 }
 
+// https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createRenderPipeline#blend
+type TBlendFactor = "constant" |
+	"src" | "src-alpha" |
+	"src1" | "src1-alpha" | "src-alpha-saturated" |
+	"dst" | "dst-alpha" |
+	"one" |
+	"one-minus-constant" |
+	"one-minus-src" | "one-minus-src-alpha" |
+	"one-minus-src1" | "one-minus-src1-alpha" |
+	"one-minus-dst" | "one-minus-dst-alpha" |
+	"zero";
+interface IFragmentPipelineBlend {
+	readonly srcFactor?: TBlendFactor;
+	readonly dstFactor?: TBlendFactor;
+	readonly operation?: "add" | "subtract" | "reverse-subtract" | "min" | "max"
+}
+
 interface IFragmentPipeline extends IPipelineBase {
 	// https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createRenderPipeline#fragment_object_structure
 	readonly targets: ReadonlyArray<{
-		// readonly blend
 		// https://gpuweb.github.io/gpuweb/#enumdef-gputextureformat
 		// Typically rgba 16/32 float, unorm, int, etc. See getPreferredCanvasFormat
 		readonly format: string;
+		readonly blend?: {
+			readonly color: IFragmentPipelineBlend;
+			readonly alpha?: IFragmentPipelineBlend;
+		};
 		// readonly writeMask
 	}>;
 }
