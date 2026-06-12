@@ -26,18 +26,15 @@ document.addEventListener("DOMContentLoaded", () => {
 					m.mount(debug, {
 						view: () => m("div", {
 							style: {
-								display: "flex",
+								display: "grid",
+								gridTemplateColumns: "auto 1fr",
 								gap: "0.5rem"
 							}
 						}, [
-							m("div", [
-								m("pre", "Engine Delta Avg."),
-								m("pre", engine.averageDelta)
-							]),
-							m("div", [
-								m("pre", "Frame Scale"),
-								m("pre", engine.averageFrameScale)
-							])
+							m("pre", "Engine Delta Avg."),
+							m("pre", engine.averageDelta),
+							m("pre", "Frame Scale"),
+							m("pre", engine.averageFrameScale)
 						])
 					});
 					setInterval(m.redraw, 1000);
