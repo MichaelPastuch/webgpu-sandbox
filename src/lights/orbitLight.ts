@@ -5,7 +5,7 @@ import { Light } from "./light";
 export class OrbitLight {
 
 	constructor(
-		private readonly light: Light,
+		readonly light: Light,
 		private originX: number,
 		private originY: number,
 		private originZ: number,

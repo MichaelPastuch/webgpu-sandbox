@@ -6,7 +6,11 @@ import { Vector4 } from "../vector/vector4";
 export class Light {
 
 	readonly #lightBuffer: IGpuBuffer;
-	readonly #lightData = new ArrayBuffer(Matrix4.byteLength + 2 * Vector4.byteLength + 2 * Vector3.byteLength);
+	readonly #lightData = new ArrayBuffer(
+		Matrix4.byteLength +
+		2 * Vector4.byteLength +
+		2 * Vector3.byteLength
+	);
 
 	readonly #lightMatrix = new Matrix4(this.#lightData, 0);
 	#position = new Vector4(this.#lightData, Matrix4.byteLength);
@@ -14,8 +18,6 @@ export class Light {
 	// TODO Direction
 	#color = new Vector3(this.#lightData, Matrix4.byteLength + 2 * Vector4.byteLength);
 	#attenuation = new Vector3(this.#lightData, Matrix4.byteLength + 2 * Vector4.byteLength + Vector3.byteLength);
-
-	// TODO Experiment calculating viewposition from given camera view transform
 
 	public readonly bindGroup: IGpuBindGroup;
 
@@ -27,7 +29,7 @@ export class Light {
 		this.#lightMatrix.identity();
 		this.#position.set(0, 0, 0, 1);
 		this.#color.set(1, 1, 1);
-		this.range(9);
+		this.range(10);
 		// this.#attenuation.set(1, 0.22, 0.20);
 		// this.#attenuation.set(1, 0.14, 0.07);
 		this.#lightBuffer = this.device.createBuffer({
@@ -46,6 +48,7 @@ export class Light {
 	/** Adjust distance attenuation, recommend 2 or greater */
 	public range(range: number) {
 		this.#attenuation.set(1, 2.0 / range, 1.0 / (range * range));
+		return this;
 	}
 
 	public position(x: number, y: number, z: number) {
