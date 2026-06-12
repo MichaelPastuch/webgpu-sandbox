@@ -1,5 +1,6 @@
 import { DEG_TO_RAD, HALF_PI } from "../constants";
-import { type IGpu, type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "../interface";
+import { ScreenQuad } from "../engine/screenQuad";
+import { type IGpu, type IGpuBindGroup, type IGpuBindGroupLayout, type IGpuBuffer, type IGpuCanvasContext, type IGpuDevice, type IGpuPipelineLayout, type IGpuRenderPipeline, type IGpuShaderModule, type IGpuTexture, type TCanvasFormat } from "../interface";
 import { Light } from "../lights/light";
 import { Circle } from "../models/circle";
 import { Cuboid } from "../models/cuboid";
@@ -44,20 +45,68 @@ export class Graphics {
 	readonly #ambientBuffer: IGpuBuffer;
 	readonly #ambientData = new ArrayBuffer(Vector3.byteLength);
 	readonly #amblentColor = new Vector3(this.#ambientData, 0);
-	readonly #clearColor: [number, number, number, number] = [0, 0, 0, 1];
 
 	public readonly camera: Camera;
 	private readonly globalBindGroup: IGpuBindGroup;
 	// private readonly basicSampler: IGpuSampler;
 
+	private readonly screenQuad: ScreenQuad;
+
+	// Scene models
 	private readonly models: Model[];
-	public readonly light: Light;
 	private readonly forwardPipeline: IGpuRenderPipeline;
+
+	// Light objects
+	private readonly directionalLight: Light;
+	public readonly lights: Light[];
+	// TODO Point and spot light models
 
 	private readonly deferredBindGroupLayout: IGpuBindGroupLayout;
 	private deferredBindGroup!: IGpuBindGroup;
-	private readonly lights: Model[];
-	private readonly deferredPipeline: IGpuRenderPipeline;
+
+	private readonly deferredPipelineLayout: IGpuPipelineLayout;
+	private readonly directionalLightPipeline: IGpuRenderPipeline;
+	private readonly pointLightPipeline: IGpuRenderPipeline;
+
+	private createDeferredPipeline(vertexEntryPoint: string, fragmentEntryPoint: string) {
+		return this.device.createRenderPipeline({
+			layout: this.deferredPipelineLayout,
+			primitive: {
+				cullMode: "back",
+				topology: "triangle-strip"
+			},
+			vertex: {
+				module: this.module,
+				entryPoint: vertexEntryPoint,
+				buffers: [{
+					attributes: [{
+						// Position
+						shaderLocation: 0,
+						offset: 0,
+						format: "float32x3"
+					}],
+					arrayStride: 12
+				}]
+			},
+			fragment: {
+				module: this.module,
+				entryPoint: fragmentEntryPoint,
+				targets: [{
+					format: this.format,
+					blend: {
+						color: {
+							srcFactor: "one",
+							dstFactor: "one"
+						},
+						alpha: {
+							srcFactor: "one",
+							dstFactor: "one"
+						}
+					}
+				}]
+			}
+		});
+	}
 
 	private constructor(
 		private readonly device: IGpuDevice,
@@ -70,10 +119,12 @@ export class Graphics {
 		this.context.configure({
 			device: this.device,
 			format: this.format,
-			alphaMode: "premultiplied"
+			alphaMode: "opaque"
 		});
 
 		this.camera = new Camera(this.device);
+
+		this.screenQuad = new ScreenQuad(this.device);
 
 		// Prepare shaders
 		this.module = this.device.createShaderModule({
@@ -140,13 +191,10 @@ export class Graphics {
 				binding: 2,
 				visibility: GPUShaderStage.FRAGMENT,
 				texture: {
-					sampleType: "float"
+					sampleType: "unfilterable-float"
 				}
 			}]
 		});
-
-		// Full-screen point light
-		this.light = new Light(this.device, this.camera.viewMatrix, lightBindGroupLayout);
 
 		// TODO Function to create models for sphere, etc.
 		this.models = [
@@ -218,16 +266,6 @@ export class Graphics {
 				.writeBuffer()
 		];
 
-		// Deferred pass directional light
-		this.lights = [
-			// Directional light, applied to entire screen
-			new Rectangle(this.device, modelBindGroupLayout, {
-				width: 2,
-				colors: "c"
-			})
-				.writeBuffer()
-		];
-
 		// Create pipeline layout
 		const forwardPipelineLayout = this.device.createPipelineLayout({
 			bindGroupLayouts: [
@@ -237,7 +275,6 @@ export class Graphics {
 			]
 		});
 
-		// TODO Functions to create/update pipeline with entryPoints and constants
 		// Input assembly - describe vertex assembly and wgsl entry points
 		this.forwardPipeline = this.device.createRenderPipeline({
 			layout: forwardPipelineLayout,
@@ -287,7 +324,32 @@ export class Graphics {
 			}
 		});
 
-		const deferredPipelineLayout = this.device.createPipelineLayout({
+		// Deferred pass directional light, engine initialises & calls writeBuffer
+		this.directionalLight = new Light(this.device, this.camera.viewMatrix, lightBindGroupLayout)
+			// Position repurposed as direction
+			.position(0.2, 0.8, -1);
+
+		// Full-screen point lights
+		this.lights = [
+			// Engine wraps with PointLight & calls writeBuffer
+			new Light(this.device, this.camera.viewMatrix, lightBindGroupLayout),
+			new Light(this.device, this.camera.viewMatrix, lightBindGroupLayout)
+				.color(1, 1, 0.6)
+				.range(5),
+			// Static
+			new Light(this.device, this.camera.viewMatrix, lightBindGroupLayout)
+				.position(6, 0.5, -6)
+				.color(0.8, 0.2, 0.2)
+				.range(12)
+				.writeBuffer(),
+			new Light(this.device, this.camera.viewMatrix, lightBindGroupLayout)
+				.position(-6, 0.5, 6)
+				.color(0.2, 0.2, 0.8)
+				.range(12)
+				.writeBuffer()
+		];
+
+		this.deferredPipelineLayout = this.device.createPipelineLayout({
 			bindGroupLayouts: [
 				globalBindGroupLayout,
 				this.camera.bindGroupLayout,
@@ -296,43 +358,13 @@ export class Graphics {
 			]
 		});
 
-		this.deferredPipeline = this.device.createRenderPipeline({
-			layout: deferredPipelineLayout,
-			primitive: {
-				cullMode: "back",
-				topology: "triangle-list"
-			},
-			vertex: {
-				module: this.module,
-				entryPoint: "lightVertexShader",
-				buffers: [{
-					attributes: [{
-						// Position
-						shaderLocation: 0,
-						offset: 0,
-						format: "float32x3"
-					}, {
-						// Normal
-						shaderLocation: 1,
-						offset: 12,
-						format: "float32x3"
-					}, {
-						// Colour
-						shaderLocation: 2,
-						offset: 24,
-						format: "float32x3"
-					}],
-					arrayStride: 36
-				}]
-			},
-			fragment: {
-				module: this.module,
-				entryPoint: "lightFragmentShader",
-				targets: [{
-					format: this.format
-				}]
-			}
-		});
+		this.directionalLightPipeline = this.createDeferredPipeline(
+			"lightVertexShader", "directionalLightFragment"
+		);
+
+		this.pointLightPipeline = this.createDeferredPipeline(
+			"lightVertexShader", "pointLightFragment"
+		);
 
 		// Initialise dimensions, depth buffer, and camera aspect ratio
 		this.resize(canvas.width, canvas.height);
@@ -385,15 +417,14 @@ export class Graphics {
 	}
 
 	public setAmbientColor(red: number, green: number, blue: number) {
+		this.directionalLight.color(red, green, blue)
+			.writeBuffer();
+		// TODO Retire
 		this.#amblentColor.set(red, green, blue);
 		this.device.queue.writeBuffer(
 			this.#ambientBuffer, 0,
 			this.#ambientData, 0, this.#ambientData.byteLength
 		);
-		// Sync clear value with ambient
-		this.#clearColor[0] = red;
-		this.#clearColor[1] = green;
-		this.#clearColor[2] = blue;
 	}
 
 	// TODO Scenegraph system
@@ -436,28 +467,33 @@ export class Graphics {
 		// Prepare render pass - clear canvas and draw lights
 		const deferredPassEncoder = commandEncoder.beginRenderPass({
 			colorAttachments: [{
-				clearValue: this.#clearColor,
 				loadOp: "load",
 				storeOp: "store",
 				view: this.context.getCurrentTexture().createView()
 			}]
 		});
 
-		// Render pipeline and bind groups
-		deferredPassEncoder.setPipeline(this.deferredPipeline);
 		deferredPassEncoder.setBindGroup(0, this.globalBindGroup);
 		// TODO Create bind group combining deferred textures and camera?
 		deferredPassEncoder.setBindGroup(1, this.camera.bindGroup);
 		deferredPassEncoder.setBindGroup(2, this.deferredBindGroup);
 
-		// TODO Bind light per entry
-		deferredPassEncoder.setBindGroup(3, this.light.bindGroup);
-		// Draw lights
-		for (const model of this.lights) {
-			// deferredPassEncoder.setBindGroup(3, this.light.bindGroup);
-			model.draw(deferredPassEncoder);
+		// Draw directional ambient light
+		deferredPassEncoder.setPipeline(this.directionalLightPipeline);
+		deferredPassEncoder.setBindGroup(3, this.directionalLight.bindGroup);
+		this.screenQuad.draw(deferredPassEncoder);
+
+		// Draw full-screen point lights
+		deferredPassEncoder.setPipeline(this.pointLightPipeline);
+		for (const light of this.lights) {
+			deferredPassEncoder.setBindGroup(3, light.bindGroup);
+			// TODO Draw point lights within range circles
+			this.screenQuad.draw(deferredPassEncoder);
 		}
+
 		deferredPassEncoder.end();
+
+		// TODO Post process pass: gamma correction, lense effects, vignette, etc.
 
 		// Submit commands to GPU
 		this.device.queue.submit([commandEncoder.finish()]);

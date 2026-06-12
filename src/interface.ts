@@ -156,7 +156,7 @@ interface IGpuPipelineLayoutDescriptor {
 	readonly bindGroupLayouts: ReadonlyArray<IGpuBindGroupLayout>;
 }
 
-interface IGpuPipelineLayout {
+export interface IGpuPipelineLayout {
 	readonly label: string;
 }
 

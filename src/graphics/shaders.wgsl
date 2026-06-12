@@ -13,10 +13,6 @@ struct View {
 }
 @group(1) @binding(0) var<uniform> view: View;
 
-// const gamma = 2.2;
-const gamma = 1.4;
-const gammaPow = vec3f(1.0 / gamma);
-
 // Forward shaders and bindings
 
 struct Model {
@@ -87,20 +83,29 @@ struct Light {
 }
 @group(3) @binding(0) var<uniform> light: Light;
 
+struct LightOut {
+	@builtin(position) fragment: vec4f,
+	@location(0) position: vec4f
+}
+
+// Directional light
 @vertex
 fn lightVertexShader(
-	@location(0) position: vec3f,
-	@location(1) normal: vec3f,
-	@location(2) color: vec3f
-) -> VertexOut {
+	@location(0) position: vec3f
+) -> LightOut {
 	let lightPosition = vec4f(position, 1) * light.transform;
-	return VertexOut(
+	return LightOut(
 		// Don't apply camera transform for directional light
 		lightPosition,
-		lightPosition,
-		vec4f(normal, 1),
-		color
+		lightPosition
 	);
+}
+
+// Get surface position in view space from clip position and depth buffer
+fn surfacePos(clipX: f32, clipY: f32, depth: f32) -> vec3f {
+	let surfaceClipPos = vec4f(clipX, clipY, depth, 1);
+	let invProjPos = surfaceClipPos * view.invProj;
+	return invProjPos.xyz / invProjPos.w;
 }
 
 fn attenuation(distance: f32, factors: vec3f) -> f32 {
@@ -122,41 +127,57 @@ fn specular(lightDir: vec3f, surfaceNormal: vec3f, viewDir: vec3f, shininess: f3
 	return pow(max(dot(normalize(lightDir + viewDir), surfaceNormal), 0.0), shininess);
 }
 
+// const gamma = 2.2;
+const gamma = 1.4;
+const gammaPow = vec3f(1.0 / gamma);
+fn gammaCorrection(color: vec3f) -> vec3f {
+	return pow(color, gammaPow);
+}
+
+fn vignette(clipX: f32, clipY: f32) -> f32 {
+	return smoothstep(3.0, 1.0, clipX * clipX + clipY * clipY);
+}
+
 @fragment
-fn lightFragmentShader(
+fn directionalLightFragment(
 	@builtin(position) fragment: vec4f,
-	@location(0) position: vec4f,
-	@location(1) normal: vec4f,
-	@location(2) color: vec3f
+	@location(0) position: vec4f
 ) -> @location(0) vec4f {
 	let tex = vec2u(fragment.xy);
 	let depth = textureLoad(depthTexture, tex, 0);
-	let surfaceClipPos = vec4f(position.x, position.y, depth, 1);
-	// Inverse project to view space surface position
-	let invProjPos = surfaceClipPos * view.invProj;
-	let surfacePos = invProjPos.xyz / invProjPos.w;
+	let surfacePos = surfacePos(position.x, position.y, depth);
 	let surfaceNormal = normalize(textureLoad(gNormal, tex, 0).xyz);
 	let albedo = textureLoad(gColor, tex, 0);
 
-	// Debug gbuffer views
-	// return vec4f(0, depth * depth * depth, 0, 1);
-	// return vec4f(0.5 * (surfaceClipPos.xy + 1), surfaceClipPos.z, 1);
-	// return vec4f((4 + surfacePos) * 0.05, 1);
-	// return vec4f(abs(surfaceNormal), 1);
-	// return albedo;
+	// TODO light direction in view space
+	let lightDir = normalize(light.position.xyz);
+
+	let light = (
+		modelDiffuse * diffuse(lightDir, surfaceNormal)
+		+ modelSpecular * specular(lightDir, surfaceNormal, normalize(-surfacePos.xyz), modelShininess)
+	) * light.color;
+	return vec4(light * albedo.xyz, 1);
+}
+
+@fragment
+fn pointLightFragment(
+	@builtin(position) fragment: vec4f,
+	@location(0) position: vec4f
+) -> @location(0) vec4f {
+	let tex = vec2u(fragment.xy);
+	let depth = textureLoad(depthTexture, tex, 0);
+	let surfacePos = surfacePos(position.x, position.y, depth);
+	let surfaceNormal = normalize(textureLoad(gNormal, tex, 0).xyz);
+	let albedo = textureLoad(gColor, tex, 0);
 
 	let lightVec = light.viewPosition.xyz - surfacePos.xyz;
 	let distance = length(lightVec);
 	let lightDir = lightVec / distance;
 
-	let attenScale = attenuation(distance, light.attenuation);
-	let diffuseCol = modelDiffuse * diffuse(lightDir, surfaceNormal) * attenScale * light.color;
-	let specularCol = modelSpecular * specular(lightDir, surfaceNormal, normalize(-surfacePos.xyz), modelShininess) * attenScale * light.color;
-
-	// Accumulate light
-	let light = ambient + diffuseCol + specularCol;
-	// return vec4(light, 1);
-
-	// Apply gamma correction
-	return vec4(pow(light * albedo.xyz, gammaPow), 1);
+	let light = (
+		modelDiffuse * diffuse(lightDir, surfaceNormal)
+		+ modelSpecular * specular(lightDir, surfaceNormal, normalize(-surfacePos.xyz), modelShininess)
+	) * attenuation(distance, light.attenuation) * light.color;
+	// return vec4(gammaCorrection(vignette(position.x, position.y) * light * albedo.xyz), 1);
+	return vec4(light * albedo.xyz, 1);
 }

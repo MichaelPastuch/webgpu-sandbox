@@ -25,7 +25,7 @@ export class Engine {
 		return this.frameScaleAvg.average;
 	}
 
-	private readonly orbitLight: OrbitLight;
+	private readonly orbitLights: OrbitLight[] = [];
 
 	private constructor(
 		private readonly canvas: HTMLCanvasElement,
@@ -61,12 +61,23 @@ export class Engine {
 			}
 		});
 
-		// Orbit light around scene
-		this.orbitLight = new OrbitLight(
-			this.graphics.light,
-			-1, 0, -1,
-			1, 3, 0
-		);
+		const firstLight = this.graphics.lights[0];
+		if (firstLight != null) {
+			// Orbit lights around scene
+			this.orbitLights.push(new OrbitLight(
+				firstLight,
+				-1, 0, -1,
+				1, 3, 0
+			));
+		}
+		const secondLight = this.graphics.lights[1];
+		if (secondLight != null) {
+			this.orbitLights.push(new OrbitLight(
+				secondLight,
+				1, 0, 1,
+				-1.5, 1, Math.PI
+			));
+		}
 
 		// Initialise graphics
 		this.graphics.setAmbientColor(0.15, 0.15, 0.15);
@@ -88,8 +99,10 @@ export class Engine {
 			this.engineDeltaAvg.update(TimeManager.engineDelta);
 
 			// Advance physics
-			this.orbitLight.update();
 			userCamera.update();
+			for (const orb of this.orbitLights) {
+				orb.update();
+			}
 
 			// Enter fullscreen
 			if (Input.key(Keybind.FULLSCREEN) && document.fullscreenElement == null) {
@@ -115,8 +128,10 @@ export class Engine {
 			this.frameScaleAvg.update(Time.frameScale);
 
 			// Extrapolate physics for frame
-			this.orbitLight.writeFrame();
 			userCamera.writeFrame();
+			for (const orb of this.orbitLights) {
+				orb.writeFrame();
+			}
 
 			// Draw results
 			this.graphics.render();
@@ -209,25 +224,25 @@ export class Engine {
 
 		lightBox.append(widget({
 			label: "Strength",
-			initialValue: 9, min: 2, max: 50,
-			onChange: (newRange) => this.graphics.light.range(newRange)
+			initialValue: 10, min: 2, max: 50,
+			onChange: (newRange) => this.orbitLights[0]?.light.range(newRange)
 		}));
 		lightBox.append(widget({
 			label: "Orbit Radius",
 			initialValue: 30, min: 0, max: 100,
-			onChange: (newDistance) => this.orbitLight.updateDistance(0.1 * newDistance)
+			onChange: (newDistance) => this.orbitLights[0]?.updateDistance(0.1 * newDistance)
 		}));
 		lightBox.append(widget({
 			label: "Angular Velocity",
 			initialValue: 100, min: 0, max: 500,
-			onChange: (newVelocity) => this.orbitLight.updateVelocity(0.01 * newVelocity)
+			onChange: (newVelocity) => this.orbitLights[0]?.updateVelocity(0.01 * newVelocity)
 		}));
 		let lightR = 90;
 		let lightG = 90;
 		let lightB = 80;
 		const lightScalar = 0.01;
 		const updateLight = () => {
-			this.graphics.light.color(
+			this.orbitLights[0]?.light.color(
 				lightR * lightScalar,
 				lightG * lightScalar,
 				lightB * lightScalar
