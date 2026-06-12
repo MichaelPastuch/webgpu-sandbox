@@ -467,7 +467,7 @@ export class Graphics {
 		// Prepare render pass - clear canvas and draw lights
 		const deferredPassEncoder = commandEncoder.beginRenderPass({
 			colorAttachments: [{
-				loadOp: "load",
+				loadOp: "clear",
 				storeOp: "store",
 				view: this.context.getCurrentTexture().createView()
 			}]
