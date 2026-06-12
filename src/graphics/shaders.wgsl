@@ -108,6 +108,10 @@ fn surfacePos(clipX: f32, clipY: f32, depth: f32) -> vec3f {
 	return invProjPos.xyz / invProjPos.w;
 }
 
+fn noise(input: f32) -> f32 {
+	return (fract(sin(input) * 159233.67567) - 0.5) * 0.015;
+}
+
 fn attenuation(distance: f32, factors: vec3f) -> f32 {
 	let attenuation = 1.0 / (
 		factors.x +
