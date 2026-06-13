@@ -75,7 +75,7 @@ export class Engine {
 			this.orbitLights.push(new OrbitLight(
 				secondLight,
 				1, 0, 1,
-				-3, 1, Math.PI
+				-2, 1, Math.PI
 			));
 		}
 
