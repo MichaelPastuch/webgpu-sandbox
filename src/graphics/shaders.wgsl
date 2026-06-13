@@ -88,14 +88,25 @@ struct LightOut {
 	@location(0) position: vec4f
 }
 
-// Directional light
+@vertex
+fn quadVertexShader(
+	@location(0) position: vec3f
+) -> LightOut {
+	// Don't apply camera transform for full-screen quad
+	let lightPosition = vec4f(position, 1);
+	return LightOut(
+		lightPosition,
+		lightPosition
+	);
+}
+
 @vertex
 fn lightVertexShader(
 	@location(0) position: vec3f
 ) -> LightOut {
 	let lightPosition = vec4f(position, 1) * light.transform;
 	return LightOut(
-		// Don't apply camera transform for directional light
+		// TODO apply camera transform
 		lightPosition,
 		lightPosition
 	);
@@ -106,10 +117,6 @@ fn surfacePos(clipX: f32, clipY: f32, depth: f32) -> vec3f {
 	let surfaceClipPos = vec4f(clipX, clipY, depth, 1);
 	let invProjPos = surfaceClipPos * view.invProj;
 	return invProjPos.xyz / invProjPos.w;
-}
-
-fn noise(input: f32) -> f32 {
-	return (fract(sin(input) * 159233.67567) - 0.5) * 0.015;
 }
 
 fn attenuation(distance: f32, factors: vec3f) -> f32 {
@@ -131,17 +138,6 @@ fn specular(lightDir: vec3f, surfaceNormal: vec3f, viewDir: vec3f, shininess: f3
 	return pow(max(dot(normalize(lightDir + viewDir), surfaceNormal), 0.0), shininess);
 }
 
-// const gamma = 2.2;
-const gamma = 1.4;
-const gammaPow = vec3f(1.0 / gamma);
-fn gammaCorrection(color: vec3f) -> vec3f {
-	return pow(color, gammaPow);
-}
-
-fn vignette(clipX: f32, clipY: f32) -> f32 {
-	return smoothstep(3.0, 1.0, clipX * clipX + clipY * clipY);
-}
-
 @fragment
 fn directionalLightFragment(
 	@builtin(position) fragment: vec4f,
@@ -157,8 +153,8 @@ fn directionalLightFragment(
 	let lightDir = normalize(light.position.xyz);
 
 	let light = (
-		modelDiffuse * diffuse(lightDir, surfaceNormal)
-		+ modelSpecular * specular(lightDir, surfaceNormal, normalize(-surfacePos.xyz), modelShininess)
+		modelDiffuse * diffuse(lightDir, surfaceNormal) +
+		modelSpecular * specular(lightDir, surfaceNormal, normalize(-surfacePos.xyz), modelShininess)
 	) * light.color;
 	return vec4(light * albedo.xyz, 1);
 }
@@ -179,9 +175,47 @@ fn pointLightFragment(
 	let lightDir = lightVec / distance;
 
 	let light = (
-		modelDiffuse * diffuse(lightDir, surfaceNormal)
-		+ modelSpecular * specular(lightDir, surfaceNormal, normalize(-surfacePos.xyz), modelShininess)
+		modelDiffuse * diffuse(lightDir, surfaceNormal) +
+		modelSpecular * specular(lightDir, surfaceNormal, normalize(-surfacePos.xyz), modelShininess)
 	) * attenuation(distance, light.attenuation) * light.color;
-	// return vec4(gammaCorrection(vignette(position.x, position.y) * light * albedo.xyz), 1);
 	return vec4(light * albedo.xyz, 1);
+}
+
+// Post shaders and bindings
+@group(0) @binding(0) var colorTexture: texture_2d<f32>;
+
+// const gamma = 2.2;
+const gamma = 1.4;
+const gammaPow = vec3f(1.0 / gamma);
+fn gammaCorrection(color: vec3f) -> vec3f {
+	return pow(color, gammaPow);
+}
+
+fn vignette(clipX: f32, clipY: f32) -> f32 {
+	return smoothstep(3.0, 1.0, clipX * clipX + clipY * clipY);
+}
+
+fn rand(input: vec2f) -> f32 {
+	return fract(sin(dot(input, vec2f(41.833, 97.9797))) * 159233.67567);
+}
+
+const noiseFract = 0.99;
+const noiseScale = (1.0 - noiseFract) * 2.0;
+
+// Scaled noise for given fragment xy position
+fn noise(frag2d: vec2f) -> f32 {
+	return noiseFract + noiseScale * rand(frag2d.xy * 0.67);
+}
+
+@fragment
+fn postFragment(
+	@builtin(position) fragment: vec4f,
+	@location(0) position: vec4f
+) -> @location(0) vec4f {
+	return vec4(
+		vignette(position.x, position.y) *
+		noise(fragment.xy) *
+		gammaCorrection(textureLoad(colorTexture, vec2u(fragment.xy), 0).xyz),
+		1
+	);
 }

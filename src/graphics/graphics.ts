@@ -41,6 +41,7 @@ export class Graphics {
 	private readonly gBufferNormalFormat = "rgba16float";
 	private gBufferNormal!: IGpuTexture;
 	private gBufferColor!: IGpuTexture;
+	private postColor!: IGpuTexture;
 
 	readonly #ambientBuffer: IGpuBuffer;
 	readonly #ambientData = new ArrayBuffer(Vector3.byteLength);
@@ -58,15 +59,19 @@ export class Graphics {
 
 	// Light objects
 	private readonly directionalLight: Light;
-	public readonly lights: Light[];
 	// TODO Point and spot light models
+	public readonly lights: Light[];
 
 	private readonly deferredBindGroupLayout: IGpuBindGroupLayout;
 	private deferredBindGroup!: IGpuBindGroup;
-
 	private readonly deferredPipelineLayout: IGpuPipelineLayout;
 	private readonly directionalLightPipeline: IGpuRenderPipeline;
 	private readonly pointLightPipeline: IGpuRenderPipeline;
+
+	private readonly postBindGroupLayout: IGpuBindGroupLayout;
+	private postBindGroup!: IGpuBindGroup;
+	private readonly postPipelineLayout: IGpuPipelineLayout;
+	private readonly postPipeline: IGpuRenderPipeline;
 
 	private createDeferredPipeline(vertexEntryPoint: string, fragmentEntryPoint: string) {
 		return this.device.createRenderPipeline({
@@ -155,44 +160,12 @@ export class Graphics {
 			}]
 		});
 
-		// Bind per-model data
+		// Forward pass - Draw scene to gBuffers
 		const modelBindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
 				binding: 0,
 				visibility: GPUShaderStage.VERTEX,
 				buffer: { type: "uniform" }
-			}]
-		});
-
-		// Bind light data
-		const lightBindGroupLayout = this.device.createBindGroupLayout({
-			entries: [{
-				binding: 0,
-				visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-				buffer: { type: "uniform" }
-			}]
-		});
-
-		// Bind deferred pass sampler and textures
-		this.deferredBindGroupLayout = this.device.createBindGroupLayout({
-			entries: [{
-				binding: 0,
-				visibility: GPUShaderStage.FRAGMENT,
-				texture: {
-					sampleType: "depth"
-				}
-			}, {
-				binding: 1,
-				visibility: GPUShaderStage.FRAGMENT,
-				texture: {
-					sampleType: "unfilterable-float"
-				}
-			}, {
-				binding: 2,
-				visibility: GPUShaderStage.FRAGMENT,
-				texture: {
-					sampleType: "unfilterable-float"
-				}
 			}]
 		});
 
@@ -324,7 +297,41 @@ export class Graphics {
 			}
 		});
 
-		// Deferred pass directional light, engine initialises & calls writeBuffer
+		// Deferred pass - Draw lights using gBuffer
+
+		// Bind light data
+		const lightBindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+				buffer: { type: "uniform" }
+			}]
+		});
+
+		// Bind deferred pass sampler and textures
+		this.deferredBindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: {
+					sampleType: "depth"
+				}
+			}, {
+				binding: 1,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: {
+					sampleType: "unfilterable-float"
+				}
+			}, {
+				binding: 2,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: {
+					sampleType: "unfilterable-float"
+				}
+			}]
+		});
+
+		// Engine initialises & calls writeBuffer
 		this.directionalLight = new Light(this.device, this.camera.viewMatrix, lightBindGroupLayout)
 			// Position repurposed as direction
 			.position(0.2, 0.8, -1);
@@ -359,12 +366,57 @@ export class Graphics {
 		});
 
 		this.directionalLightPipeline = this.createDeferredPipeline(
-			"lightVertexShader", "directionalLightFragment"
+			"quadVertexShader", "directionalLightFragment"
 		);
 
 		this.pointLightPipeline = this.createDeferredPipeline(
 			"lightVertexShader", "pointLightFragment"
 		);
+
+		// Post pass - finalise frame for display
+		this.postBindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: {
+					sampleType: "unfilterable-float"
+				}
+			}]
+		});
+
+		this.postPipelineLayout = this.device.createPipelineLayout({
+			bindGroupLayouts: [
+				this.postBindGroupLayout
+			]
+		});
+
+		this.postPipeline = this.device.createRenderPipeline({
+			layout: this.postPipelineLayout,
+			primitive: {
+				cullMode: "back",
+				topology: "triangle-strip"
+			},
+			vertex: {
+				module: this.module,
+				entryPoint: "quadVertexShader",
+				buffers: [{
+					attributes: [{
+						// Position
+						shaderLocation: 0,
+						offset: 0,
+						format: "float32x3"
+					}],
+					arrayStride: 12
+				}]
+			},
+			fragment: {
+				module: this.module,
+				entryPoint: "postFragment",
+				targets: [{
+					format: this.format
+				}]
+			}
+		});
 
 		// Initialise dimensions, depth buffer, and camera aspect ratio
 		this.resize(canvas.width, canvas.height);
@@ -412,6 +464,22 @@ export class Graphics {
 					binding: 2,
 					resource: this.gBufferColor
 				}]
+			});
+
+			// Rebuild post process
+			this.postColor?.destroy();
+			this.postColor = this.device.createTexture({
+				format: "bgra8unorm",
+				size: [this.width, this.height],
+				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
+			});
+			// Build post process bindings
+			this.postBindGroup = this.device.createBindGroup({
+				layout: this.postBindGroupLayout,
+				entries: [{
+					binding: 0,
+					resource: this.postColor
+				},]
 			});
 		}
 	}
@@ -469,7 +537,7 @@ export class Graphics {
 			colorAttachments: [{
 				loadOp: "clear",
 				storeOp: "store",
-				view: this.context.getCurrentTexture().createView()
+				view: this.postColor.createView()
 			}]
 		});
 
@@ -493,7 +561,19 @@ export class Graphics {
 
 		deferredPassEncoder.end();
 
-		// TODO Post process pass: gamma correction, lense effects, vignette, etc.
+		// Post process pass: gamma correction, lense effects, vignette, etc.
+		const postPassEncoder = commandEncoder.beginRenderPass({
+			colorAttachments: [{
+				loadOp: "clear",
+				storeOp: "store",
+				view: this.context.getCurrentTexture().createView()
+			}]
+		});
+		postPassEncoder.setPipeline(this.postPipeline);
+		postPassEncoder.setBindGroup(0, this.postBindGroup);
+		this.screenQuad.draw(postPassEncoder);
+
+		postPassEncoder.end();
 
 		// Submit commands to GPU
 		this.device.queue.submit([commandEncoder.finish()]);
