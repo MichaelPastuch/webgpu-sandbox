@@ -97,7 +97,7 @@ export class Graphics {
 				module: this.module,
 				entryPoint: fragmentEntryPoint,
 				targets: [{
-					format: this.format,
+					format: this.postColor.format,
 					blend: {
 						color: {
 							srcFactor: "one",
@@ -137,13 +137,6 @@ export class Graphics {
 		});
 		// this.basicSampler = device.createSampler();
 
-		// Assemble ambient colour buffer
-		this.#ambientBuffer = this.device.createBuffer({
-			// rgb
-			size: this.#ambientData.byteLength,
-			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
-		});
-
 		// Bind global data for vertex/fragment shader usage
 		const globalBindGroupLayout = this.device.createBindGroupLayout({
 			entries: [{
@@ -151,6 +144,49 @@ export class Graphics {
 				visibility: GPUShaderStage.FRAGMENT,
 				buffer: { type: "uniform" }
 			}]
+		});
+		// Bind pipeline stage bind groups
+		const modelBindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: GPUShaderStage.VERTEX,
+				buffer: { type: "uniform" }
+			}]
+		});
+		const lightBindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+				buffer: { type: "uniform" }
+			}]
+		});
+		this.deferredBindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: { sampleType: "depth" }
+			}, {
+				binding: 1,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: { sampleType: "unfilterable-float" }
+			}, {
+				binding: 2,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: { sampleType: "unfilterable-float" }
+			}]
+		});
+		this.postBindGroupLayout = this.device.createBindGroupLayout({
+			entries: [{
+				binding: 0,
+				visibility: GPUShaderStage.FRAGMENT,
+				texture: { sampleType: "unfilterable-float" }
+			}]
+		});
+
+		// Assemble ambient colour buffer & bindings
+		this.#ambientBuffer = this.device.createBuffer({
+			size: this.#ambientData.byteLength,
+			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM
 		});
 		this.globalBindGroup = this.device.createBindGroup({
 			layout: globalBindGroupLayout,
@@ -160,15 +196,10 @@ export class Graphics {
 			}]
 		});
 
-		// Forward pass - Draw scene to gBuffers
-		const modelBindGroupLayout = this.device.createBindGroupLayout({
-			entries: [{
-				binding: 0,
-				visibility: GPUShaderStage.VERTEX,
-				buffer: { type: "uniform" }
-			}]
-		});
+		// Initialise render pass texture dimensions, depth buffer, and camera aspect ratio
+		this.resize(canvas.width, canvas.height);
 
+		// Forward pass - Draw models to gBuffers
 		// TODO Function to create models for sphere, etc.
 		this.models = [
 			// Initial cube
@@ -202,7 +233,7 @@ export class Graphics {
 				.rotate(HALF_PI, 0)
 				.scale(2)
 				.writeBuffer(),
-			// Create circle (octagon)
+			// Create circle
 			new Circle(device, modelBindGroupLayout, {
 				radius: 3,
 				numPoints: 16,
@@ -238,8 +269,6 @@ export class Graphics {
 				.scale(-20)
 				.writeBuffer()
 		];
-
-		// Create pipeline layout
 		const forwardPipelineLayout = this.device.createPipelineLayout({
 			bindGroupLayouts: [
 				globalBindGroupLayout,
@@ -247,8 +276,6 @@ export class Graphics {
 				modelBindGroupLayout
 			]
 		});
-
-		// Input assembly - describe vertex assembly and wgsl entry points
 		this.forwardPipeline = this.device.createRenderPipeline({
 			layout: forwardPipelineLayout,
 			// Default primitive assemble, here for illustration purposes
@@ -288,54 +315,19 @@ export class Graphics {
 				module: this.module,
 				entryPoint: "fragmentShader",
 				targets: [{
-					// Normal
-					format: this.gBufferNormalFormat
+					format: this.gBufferNormal.format
 				}, {
-					// Colour
-					format: "bgra8unorm"
+					format: this.gBufferColor.format
 				}]
 			}
 		});
 
 		// Deferred pass - Draw lights using gBuffer
 
-		// Bind light data
-		const lightBindGroupLayout = this.device.createBindGroupLayout({
-			entries: [{
-				binding: 0,
-				visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-				buffer: { type: "uniform" }
-			}]
-		});
-
-		// Bind deferred pass sampler and textures
-		this.deferredBindGroupLayout = this.device.createBindGroupLayout({
-			entries: [{
-				binding: 0,
-				visibility: GPUShaderStage.FRAGMENT,
-				texture: {
-					sampleType: "depth"
-				}
-			}, {
-				binding: 1,
-				visibility: GPUShaderStage.FRAGMENT,
-				texture: {
-					sampleType: "unfilterable-float"
-				}
-			}, {
-				binding: 2,
-				visibility: GPUShaderStage.FRAGMENT,
-				texture: {
-					sampleType: "unfilterable-float"
-				}
-			}]
-		});
-
 		// Engine initialises & calls writeBuffer
 		this.directionalLight = new Light(this.device, this.camera.viewMatrix, lightBindGroupLayout)
 			// Position repurposed as direction
 			.position(0.2, 0.8, -1);
-
 		// Full-screen point lights
 		this.lights = [
 			// Engine wraps with PointLight & calls writeBuffer
@@ -355,7 +347,6 @@ export class Graphics {
 				.range(12)
 				.writeBuffer()
 		];
-
 		this.deferredPipelineLayout = this.device.createPipelineLayout({
 			bindGroupLayouts: [
 				globalBindGroupLayout,
@@ -364,32 +355,19 @@ export class Graphics {
 				lightBindGroupLayout
 			]
 		});
-
 		this.directionalLightPipeline = this.createDeferredPipeline(
 			"quadVertexShader", "directionalLightFragment"
 		);
-
 		this.pointLightPipeline = this.createDeferredPipeline(
 			"lightVertexShader", "pointLightFragment"
 		);
 
 		// Post pass - finalise frame for display
-		this.postBindGroupLayout = this.device.createBindGroupLayout({
-			entries: [{
-				binding: 0,
-				visibility: GPUShaderStage.FRAGMENT,
-				texture: {
-					sampleType: "unfilterable-float"
-				}
-			}]
-		});
-
 		this.postPipelineLayout = this.device.createPipelineLayout({
 			bindGroupLayouts: [
 				this.postBindGroupLayout
 			]
 		});
-
 		this.postPipeline = this.device.createRenderPipeline({
 			layout: this.postPipelineLayout,
 			primitive: {
@@ -417,9 +395,6 @@ export class Graphics {
 				}]
 			}
 		});
-
-		// Initialise dimensions, depth buffer, and camera aspect ratio
-		this.resize(canvas.width, canvas.height);
 	}
 
 	public resize(width: number, height: number) {
@@ -431,24 +406,25 @@ export class Graphics {
 			this.canvas.height = this.height;
 			// Update projection matrix
 			this.camera.updateProjection(1, 100, this.aspect, 45 * DEG_TO_RAD);
+			const size: [number, number] = [this.width, this.height];
 			// Rebuild depth texture
 			this.depthTexture?.destroy();
 			this.depthTexture = this.device.createTexture({
 				format: this.depthTextureFormat,
-				size: [this.width, this.height],
+				size,
 				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
 			});
 			// Rebuild gbuffers
 			this.gBufferNormal?.destroy();
 			this.gBufferNormal = this.device.createTexture({
 				format: this.gBufferNormalFormat,
-				size: [this.width, this.height],
+				size,
 				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
 			});
 			this.gBufferColor?.destroy();
 			this.gBufferColor = this.device.createTexture({
-				format: "bgra8unorm",
-				size: [this.width, this.height],
+				format: this.format,
+				size,
 				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
 			});
 			// Build deferred bindings
@@ -465,12 +441,11 @@ export class Graphics {
 					resource: this.gBufferColor
 				}]
 			});
-
 			// Rebuild post process
 			this.postColor?.destroy();
 			this.postColor = this.device.createTexture({
-				format: "bgra8unorm",
-				size: [this.width, this.height],
+				format: this.format,
+				size,
 				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING
 			});
 			// Build post process bindings
