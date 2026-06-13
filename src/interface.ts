@@ -361,7 +361,7 @@ interface IGpuAdapter {
 	requestDevice(): Promise<IGpuDevice>;
 }
 
-export type TCanvasFormat = "bgra8unorm" | "rgba8unorm" | "rgba16float";
+export type TCanvasFormat = "bgra8unorm" | "rgba8unorm";
 
 export interface IGpu {
 	requestAdapter(): Promise<IGpuAdapter>;
